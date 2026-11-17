@@ -1,0 +1,50 @@
+# Build and downloaded native runtime (recreated by scripts).
+/bin/
+*.syso
+/build/windows/icon.ico
+/third-party/vlc/*.zip
+/third-party/vlc/runtime/
+# Legacy mpv downloads may still exist locally; never commit the runtime.
+/third-party/mpv/*.zip
+/third-party/mpv/*.exe
+/third-party/mpv/*.dll
+/third-party/mpv/runtime/
+
+# Frontend dependencies, output and caches. Keep package/lock files and bindings.
+node_modules/
+/frontend/dist/
+.vite/
+*.tsbuildinfo
+/.task/
+
+# Local configuration and credentials. Example configuration stays tracked.
+.env
+.env.*
+!.env.example
+!.env.*.example
+/desktop.json
+/desktop.local.json
+cloud-session.bin
+pairing.bin
+*.pem
+*.key
+
+# Local media/runtime data, logs and test output.
+/data/
+/data-nvr/
+/runtime/
+/runtime-nvr/
+*.log
+/coverage/
+/frontend/coverage/
+coverage.out
+*.test.exe
+
+# Editor and operating-system files.
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo

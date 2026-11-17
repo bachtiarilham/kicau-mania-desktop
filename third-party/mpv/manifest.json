@@ -1,0 +1,7 @@
+{
+  "source": "https://github.com/mpv-player/mpv",
+  "version": "v0.42.0-dev-g3d73d07e6-43715051475",
+  "url": "https://github.com/mpv-player/mpv/releases/download/git-release/mpv-v0.42.0-dev-g3d73d07e6-43715051475-x86_64-w64-mingw32-full.zip",
+  "sha256": "1b9b9208ff39b341141b98d2ddbe6cff15527d120308e198d3c40d8f382557b5",
+  "platform": "windows-amd64"
+}

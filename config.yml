@@ -1,0 +1,22 @@
+version: '3'
+info:
+  companyName: Kicau Mania
+  productName: Kicau Mania Desktop
+  productIdentifier: com.kicaumania.cctv
+  description: CCTV, saving dan upload arena
+  version: 0.1.0
+dev_mode:
+  root_path: .
+  debounce: 1000
+  log_level: warn
+  ignore:
+    dir: [.git, frontend, bin, third-party]
+  watched_extension: ['*.go']
+  git_ignore: true
+  executes:
+    - cmd: pnpm --dir frontend dev
+      type: background
+    - cmd: powershell -NoProfile -File scripts/build.ps1 -SkipFrontend -Dev
+      type: blocking
+    - cmd: ./bin/kicau-mania-desktop.exe
+      type: primary

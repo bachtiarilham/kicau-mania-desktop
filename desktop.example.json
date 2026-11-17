@@ -1,0 +1,7 @@
+{
+  "local_url": "http://127.0.0.1:8090",
+  "rtsp_base": "rtsp://127.0.0.1:8554",
+  "cloud_url": "https://dev.megaallstararena.com/api/v1",
+  "vlc": "D:\\ilham\\workdir\\wails\\kicau-mania-desktop\\bin\\vlc\\libvlc.dll",
+  "live_cache_ms": 50
+}

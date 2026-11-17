@@ -1,0 +1,19 @@
+version: '3'
+tasks:
+  build:
+    cmds:
+      - powershell -NoProfile -File scripts/build.ps1
+  package:
+    cmds:
+      - powershell -NoProfile -File scripts/package.ps1
+  bindings:
+    cmds:
+      - go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 generate bindings -ts
+  check:
+    cmds:
+      - go test ./...
+      - pnpm --dir frontend check
+      - pnpm --dir frontend test
+  dev:
+    cmds:
+      - go run github.com/wailsapp/wails/v3/cmd/wails3@v3.1.0 dev -config config.yml -port 9245
