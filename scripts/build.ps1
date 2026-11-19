@@ -17,7 +17,7 @@ try {
  # Loaded VLC plugins may be locked by an existing desktop. Do not rewrite
  # identical dependencies on every frontend build.
  foreach($source in @(Get-ChildItem -LiteralPath $vlc -Recurse -File)){
-  $relative=[IO.Path]::GetRelativePath($vlc,$source.FullName)
+  $relative=$source.FullName.Substring($vlc.Length).TrimStart('\', '/')
   $destination=Join-Path (Join-Path $root 'bin/vlc') $relative
   New-Item -ItemType Directory -Force -Path ([IO.Path]::GetDirectoryName($destination)) | Out-Null
   if((Test-Path -LiteralPath $destination) -and (Get-FileHash -LiteralPath $source.FullName -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash){continue}
