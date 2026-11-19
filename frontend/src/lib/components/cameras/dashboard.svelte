@@ -11,17 +11,35 @@
   import AudioMeter from "../metrics/audio-meter.svelte";
   import { api } from "$lib/services/api";
   import { engine } from "$lib/state/engine.svelte";
+  const STORAGE_KEY = "kicau_dashboard_block";
   let columns = $state(3),
-    block = $state("all"),
+    block = $state(
+      (typeof localStorage !== "undefined" &&
+        localStorage.getItem(STORAGE_KEY)) ||
+        "all",
+    ),
     focus = $state(""),
     audio = $state("");
+
+  $effect(() => {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, block);
+    }
+    if (block.startsWith("area_")) {
+      columns = 3;
+    }
+  });
+
   let channels = $derived(
-    engine.channels.filter(
-      (_, i) =>
-        block === "all" ||
-        (block === "first" && i < 12) ||
-        (block === "second" && i >= 12),
-    ),
+    engine.channels.filter((_, i) => {
+      if (block === "area_a") return i >= 0 && i < 6;
+      if (block === "area_b") return i >= 6 && i < 12;
+      if (block === "area_c") return i >= 12 && i < 18;
+      if (block === "area_d") return i >= 18 && i < 24;
+      if (block === "first") return i < 12;
+      if (block === "second") return i >= 12;
+      return true;
+    }),
   );
   async function sound(id: string) {
     const muted = audio === id;
@@ -49,10 +67,16 @@
         onchange={() => (engine.overlay = false)}
         aria-label="Blok kamera"
         bind:value={block}
-        ><option value="all">Semua gantangan</option><option value="first"
-          >Gantangan 1–12</option
-        ><option value="second">Gantangan 13–24</option></select
-      ><select
+      >
+        <option value="all">Semua gantangan (24 Kamera)</option>
+        <option value="area_a">Layar 1: Area A (6 Kamera)</option>
+        <option value="area_b">Layar 2: Area B (6 Kamera)</option>
+        <option value="area_c">Layar 3: Area C (6 Kamera)</option>
+        <option value="area_d">Layar 4: Area D (6 Kamera)</option>
+        <option value="first">Gantangan 1–12</option>
+        <option value="second">Gantangan 13–24</option>
+      </select>
+      <select
         onfocus={() => (engine.overlay = true)}
         onblur={() => (engine.overlay = false)}
         onchange={() => (engine.overlay = false)}
