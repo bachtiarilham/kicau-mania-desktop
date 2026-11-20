@@ -6,7 +6,13 @@
     id,
     recording = false,
     visible = true,
-  }: { id: string; recording?: boolean; visible?: boolean } = $props();
+    class: className = "",
+  }: {
+    id: string;
+    recording?: boolean;
+    visible?: boolean;
+    class?: string;
+  } = $props();
   let element: HTMLDivElement;
   let error = $state("");
   let busy = false;
@@ -84,7 +90,7 @@
 
 <div
   bind:this={element}
-  class="relative aspect-video min-h-32 bg-[#090f10] text-center"
+  class="relative min-h-0 bg-[#090f10] text-center {className || 'aspect-video w-full'}"
 >
   <div
     class="absolute inset-0 grid place-content-center gap-2 p-4 text-xs text-muted-foreground"

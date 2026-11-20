@@ -284,6 +284,7 @@
                 <NativePlayer
                   id={slot.channelId}
                   visible={!focusId || focusId === slot.channelId}
+                  class="h-full w-full"
                 />
               {:else}
                 <!-- Aesthetic Standby / Preview Canvas -->

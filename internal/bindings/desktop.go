@@ -198,6 +198,10 @@ func (d *Desktop) SyncPlayer(id string, r model.Rect) error {
 		Channels []string `json:"channels"`
 	}
 	if e := d.engine.Call(d.ctx, "GET", "/api/v1/media/sessions/current", nil, &session); e != nil {
+		errStr := strings.ToLower(e.Error())
+		if strings.Contains(errStr, "method not allowed") || strings.Contains(errStr, "405") || strings.Contains(errStr, "404") {
+			return errors.New("Kamera belum siap / sesi belum aktif")
+		}
 		return e
 	}
 	if session.State != "RUNNING" && session.State != "DEGRADED" {

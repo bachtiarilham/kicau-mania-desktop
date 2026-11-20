@@ -103,30 +103,30 @@
 
 <div class="flex h-full w-full flex-col overflow-hidden bg-[#0c1011] text-zinc-100 select-none">
   <!-- Top Section: Modern Tactical Match Control Panel (Upgraded Image 2) -->
-  <section class="shrink-0 border-b border-white/10 bg-[#12181a] p-3 sm:p-4">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+  <section class="shrink-0 border-b border-white/10 bg-[#12181a] px-3 py-2 sm:px-4">
+    <div class="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
       <!-- Left: Event, Sesi, & Schedule Meta -->
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-2.5 rounded-xl border border-white/10 bg-black/40 p-2.5 shadow-sm">
-          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-black shadow-md shadow-amber-500/20">
-            <Trophy class="h-5 w-5" />
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-black/40 px-2.5 py-1.5 shadow-sm">
+          <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-black shadow-md shadow-amber-500/20">
+            <Trophy class="h-4 w-4" />
           </div>
           <div>
-            <div class="text-[10px] font-bold tracking-widest text-amber-400 uppercase">
+            <div class="text-[9px] font-bold tracking-widest text-amber-400 uppercase">
               Nama Event
             </div>
-            <div class="text-sm font-extrabold tracking-tight text-white">
+            <div class="text-xs font-extrabold tracking-tight text-white">
               {roundStore.eventName}
             </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-2.5 rounded-xl border border-white/10 bg-black/40 px-3 py-2 shadow-sm">
+        <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-black/40 px-2.5 py-1.5 shadow-sm">
           <div>
-            <div class="text-[10px] font-bold tracking-widest text-zinc-400 uppercase">
+            <div class="text-[9px] font-bold tracking-widest text-zinc-400 uppercase">
               Babak Penilaian
             </div>
-            <div class="text-sm font-black text-amber-300">
+            <div class="text-xs font-black text-amber-300">
               {roundStore.sessionName}
             </div>
           </div>
@@ -140,22 +140,22 @@
           variant="outline"
           size="sm"
           onclick={openEditModal}
-          class="border-white/10 bg-white/5 text-xs text-zinc-300 hover:bg-white/10 hover:text-white"
+          class="h-7 border-white/10 bg-white/5 text-xs text-zinc-300 hover:bg-white/10 hover:text-white"
         >
-          <Settings class="h-3.5 w-3.5" />
+          <Settings class="h-3 w-3" />
           <span>Atur Lomba & Juri</span>
         </Button>
       </div>
 
       <!-- Center & Right: Tactical Big START / STOP Buttons & Giant Timer -->
-      <div class="flex flex-wrap items-center gap-4">
+      <div class="flex flex-wrap items-center gap-3">
         <!-- Duration Presets -->
-        <div class="hidden items-center gap-1 rounded-lg border border-white/10 bg-black/40 p-1 xl:flex">
+        <div class="hidden items-center gap-1 rounded-lg border border-white/10 bg-black/40 p-0.5 xl:flex">
           {#each [120, 150, 180, 300] as sec}
             <button
               type="button"
               onclick={() => setDurationPreset(sec)}
-              class="rounded px-2 py-1 font-mono text-[11px] font-semibold transition {roundStore.durationSeconds === sec ? 'bg-white/15 text-white' : 'text-zinc-400 hover:text-zinc-200'}"
+              class="rounded px-2 py-0.5 font-mono text-[10px] font-semibold transition {roundStore.durationSeconds === sec ? 'bg-white/15 text-white' : 'text-zinc-400 hover:text-zinc-200'}"
             >
               {sec}s
             </button>
@@ -164,14 +164,14 @@
 
         <!-- Giant Synchronized Countdown Timer -->
         <div
-          class="flex items-center gap-3 rounded-2xl border px-4 py-1.5 shadow-inner transition-all {roundStore.state === 'RUNNING' ? 'border-emerald-500/50 bg-emerald-950/30' : roundStore.remainingSeconds === 0 ? 'border-red-500/80 bg-red-950/40 animate-pulse' : 'border-white/10 bg-black/60'}"
+          class="flex items-center gap-2.5 rounded-xl border px-3 py-1 shadow-inner transition-all {roundStore.state === 'RUNNING' ? 'border-emerald-500/50 bg-emerald-950/30' : roundStore.remainingSeconds === 0 ? 'border-red-500/80 bg-red-950/40 animate-pulse' : 'border-white/10 bg-black/60'}"
         >
           <div class="flex flex-col items-center">
-            <span class="text-[9px] font-bold tracking-widest text-zinc-400 uppercase">
+            <span class="text-[8px] font-bold tracking-widest text-zinc-400 uppercase">
               Timer Sisa
             </span>
             <span
-              class="font-mono text-3xl font-black tracking-tight {roundStore.state === 'RUNNING' ? 'text-emerald-400' : roundStore.remainingSeconds === 0 ? 'text-red-500' : 'text-white'}"
+              class="font-mono text-2xl font-black tracking-tight {roundStore.state === 'RUNNING' ? 'text-emerald-400' : roundStore.remainingSeconds === 0 ? 'text-red-500' : 'text-white'}"
             >
               {roundStore.remainingSeconds}s
             </span>
@@ -180,29 +180,29 @@
           <button
             type="button"
             onclick={() => roundStore.resetRound()}
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 text-zinc-400 transition hover:bg-white/15 hover:text-white"
+            class="flex h-6 w-6 items-center justify-center rounded-lg bg-white/5 text-zinc-400 transition hover:bg-white/15 hover:text-white"
             title="Reset timer ke awal"
           >
-            <RotateCcw class="h-3.5 w-3.5" />
+            <RotateCcw class="h-3 w-3" />
           </button>
         </div>
 
         <!-- Modern Tactile START & STOP Buttons (Upgraded from Image 2) -->
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2">
           <!-- START BUTTON: Emerald Gloss with Pulse -->
           <button
             type="button"
             disabled={roundStore.state === "RUNNING"}
             onclick={() => roundStore.startRound()}
-            class="group relative flex h-12 items-center gap-2.5 rounded-full px-6 text-sm font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed {roundStore.state === 'RUNNING' ? 'bg-emerald-600/60 shadow-emerald-600/20' : 'bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 active:scale-95 shadow-emerald-500/30 hover:shadow-emerald-500/50'}"
+            class="group relative flex h-10 items-center gap-2 rounded-full px-5 text-xs font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed {roundStore.state === 'RUNNING' ? 'bg-emerald-600/60 shadow-emerald-600/20' : 'bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 active:scale-95 shadow-emerald-500/30 hover:shadow-emerald-500/50'}"
           >
             {#if roundStore.state === "RUNNING"}
               <span class="absolute -inset-1 rounded-full bg-emerald-500/20 animate-ping"></span>
             {/if}
-            <div class="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
-              <Play class="h-3.5 w-3.5 fill-current text-white ml-0.5" />
+            <div class="flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
+              <Play class="h-3 w-3 fill-current text-white ml-0.5" />
             </div>
-            <span>{roundStore.state === "RUNNING" ? "SEDANG BERJALAN" : "START"}</span>
+            <span>{roundStore.state === "RUNNING" ? "BERJALAN" : "START"}</span>
           </button>
 
           <!-- STOP BUTTON: Crimson Gloss -->
@@ -210,10 +210,10 @@
             type="button"
             disabled={roundStore.state === "IDLE" || roundStore.state === "FINISHED"}
             onclick={() => roundStore.stopRound()}
-            class="flex h-12 items-center gap-2.5 rounded-full px-6 text-sm font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 shadow-red-600/30 hover:shadow-red-600/50"
+            class="flex h-10 items-center gap-2 rounded-full px-5 text-xs font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 shadow-red-600/30 hover:shadow-red-600/50"
           >
-            <div class="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
-              <Square class="h-3.5 w-3.5 fill-current text-white" />
+            <div class="flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
+              <Square class="h-3 w-3 fill-current text-white" />
             </div>
             <span>STOP</span>
           </button>
@@ -223,7 +223,7 @@
   </section>
 
   <!-- Filter & Spotlight Status Bar -->
-  <section class="flex h-11 shrink-0 items-center justify-between border-b border-white/10 bg-[#0e1416] px-4">
+  <section class="flex h-9 shrink-0 items-center justify-between border-b border-white/10 bg-[#0e1416] px-3 sm:px-4">
     <div class="flex items-center gap-2">
       <div class="flex items-center gap-1 rounded-lg border border-white/10 bg-black/40 p-0.5">
         <button
@@ -276,7 +276,7 @@
   </section>
 
   <!-- Main Area: Live 24 Gantangan Matrix Overview -->
-  <main class="min-h-0 flex-1 overflow-y-auto p-3">
+  <main class="min-h-0 flex-1 {selectedFilter === 'all' ? 'overflow-y-auto p-2.5 sm:p-3' : 'overflow-hidden p-2 flex flex-col'}">
     {#if spotlightStream}
       <!-- Single Spotlight High-Res View -->
       <div class="flex h-full w-full flex-col gap-3 rounded-2xl border border-white/10 bg-black/60 p-4">
@@ -303,7 +303,7 @@
 
         <div class="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-black">
           {#if engine.connected}
-            <NativePlayer id={spotlightStream.id} visible={true} />
+            <NativePlayer id={spotlightStream.id} visible={true} class="h-full w-full" />
           {:else}
             <div class="flex h-full w-full items-center justify-center text-zinc-400 text-sm">
               Menghubungkan ke engine siaran kamera...
@@ -313,11 +313,11 @@
 
         <AudioMeter metric={engine.metrics[spotlightStream.id]} />
       </div>
-    {:else}
-      <!-- 24 Gantangan High-Density Matrix (6 columns x 4 rows on 1080p) -->
+    {:else if selectedFilter === "all"}
+      <!-- 24 Gantangan High-Density Matrix (Scrollable overview) -->
       <div
-        class="grid gap-2.5"
-        style:grid-template-columns={selectedFilter === "all" ? "repeat(auto-fill, minmax(240px, 1fr))" : "repeat(3, minmax(0, 1fr))"}
+        class="grid gap-2"
+        style:grid-template-columns="repeat(auto-fill, minmax(240px, 1fr))"
       >
         {#each filteredStreams as stream (stream.id)}
           <article
@@ -375,6 +375,85 @@
             <div class="relative aspect-video w-full overflow-hidden bg-black/60">
               {#if engine.connected}
                 <NativePlayer id={stream.id} visible={true} />
+              {:else}
+                <div class="flex h-full w-full items-center justify-center bg-gradient-to-br {stream.previewGradient}">
+                  <span class="text-[11px] font-bold text-zinc-400">
+                    {stream.code} · {stream.channelName}
+                  </span>
+                </div>
+              {/if}
+            </div>
+
+            <!-- Mini Audio Meter -->
+            <div class="shrink-0 bg-[#0e1416]/90 p-0.5">
+              <AudioMeter metric={engine.metrics[stream.id]} compact />
+            </div>
+          </article>
+        {/each}
+      </div>
+    {:else}
+      <!-- Exactly 6 Cameras in 3x2 Grid (Contained, Fits 100% Height & Width without overflow) -->
+      <div
+        class="grid h-full w-full min-h-0 flex-1 gap-2"
+        style:grid-template-columns="repeat(3, minmax(0, 1fr))"
+        style:grid-template-rows="repeat(2, minmax(0, 1fr))"
+      >
+        {#each filteredStreams as stream (stream.id)}
+          <article
+            class="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#131a1c] shadow-sm transition hover:border-white/25"
+          >
+            <!-- Card Header -->
+            <header class="flex h-7 shrink-0 items-center justify-between border-b border-white/5 bg-black/40 px-2 py-0.5">
+              <div class="flex min-w-0 items-center gap-1.5">
+                <span
+                  class="flex h-4 items-center justify-center rounded bg-gradient-to-br {stream.accentColor} px-1 font-mono text-[10px] font-black text-white"
+                >
+                  {stream.code}
+                </span>
+                <span class="truncate text-[11px] font-semibold text-zinc-200">
+                  {stream.category}
+                </span>
+              </div>
+
+              <div class="flex shrink-0 items-center gap-1">
+                <span class="font-mono text-[8px] text-zinc-400">
+                  {#if engine.running}
+                    <span class="text-rose-400 font-bold animate-pulse">REC</span>
+                  {:else if engine.connected}
+                    <span class="text-emerald-400 font-bold">LIVE</span>
+                  {:else}
+                    <span class="text-zinc-500">STANDBY</span>
+                  {/if}
+                </span>
+
+                <button
+                  type="button"
+                  onclick={() => toggleAudio(stream.id)}
+                  class="flex h-5 w-5 items-center justify-center rounded text-zinc-400 hover:text-white"
+                  title="Audio"
+                >
+                  {#if audioMuted[stream.id]}
+                    <VolumeX class="h-3 w-3 text-zinc-500" />
+                  {:else}
+                    <Volume2 class="h-3 w-3 text-sky-400" />
+                  {/if}
+                </button>
+
+                <button
+                  type="button"
+                  onclick={() => (spotlightId = stream.id)}
+                  class="flex h-5 w-5 items-center justify-center rounded text-zinc-400 hover:text-white"
+                  title="Perbesar sorotan kamera"
+                >
+                  <Maximize2 class="h-3 w-3" />
+                </button>
+              </div>
+            </header>
+
+            <!-- Video Player Area: Dynamically fills available vertical space -->
+            <div class="relative min-h-0 flex-1 overflow-hidden bg-black/60">
+              {#if engine.connected}
+                <NativePlayer id={stream.id} visible={true} class="h-full w-full" />
               {:else}
                 <div class="flex h-full w-full items-center justify-center bg-gradient-to-br {stream.previewGradient}">
                   <span class="text-[11px] font-bold text-zinc-400">

@@ -223,10 +223,10 @@
 
       <main
         data-viewport
-        class="min-h-0 flex-1 {['cameras', 'operator'].includes(tab) ? 'overflow-hidden p-0' : 'overflow-y-auto p-6'}"
+        class="relative min-h-0 flex-1 flex flex-col {['cameras', 'operator'].includes(tab) ? 'overflow-hidden p-0' : 'overflow-y-auto p-6'}"
       >
         {#if engine.error}
-          <div class="error m-4 mb-2 flex items-center justify-between" role="alert">
+          <div class="error m-3 mb-1 shrink-0 flex items-center justify-between" role="alert">
             <div>
               {engine.error}
               <button class="ml-2 underline" onclick={() => engine.connect()}>
@@ -236,8 +236,8 @@
           </div>
         {/if}
         {#if engine.notice && !noticeDismissed}
-          <div class="notice m-4 mb-2 flex items-center justify-between">
-            <span>{engine.notice}</span>
+          <div class="notice m-3 mb-1 shrink-0 flex items-center justify-between">
+            <span class="text-xs">{engine.notice}</span>
             <button
               class="ml-3 rounded p-0.5 text-xs opacity-70 hover:opacity-100 transition-opacity"
               onclick={() => (noticeDismissed = true)}
@@ -249,11 +249,11 @@
         {/if}
 
         {#if tab === "operator"}
-          <div class="h-full w-full overflow-hidden">
+          <div class="flex-1 min-h-0 w-full overflow-hidden">
             <OperatorDashboard />
           </div>
         {:else if tab === "cameras"}
-          <div class="h-full w-full overflow-hidden">
+          <div class="flex-1 min-h-0 w-full overflow-hidden">
             <ZoneGrid3x2 />
           </div>
         {:else if tab === "recordings"}
