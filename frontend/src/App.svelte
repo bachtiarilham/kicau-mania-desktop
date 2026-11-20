@@ -9,6 +9,8 @@
     RefreshCw,
     LogOut,
     LayoutDashboard,
+    PanelLeftClose,
+    Menu,
   } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import SettingsPage from "$lib/components/layout/settings-page.svelte";
@@ -22,6 +24,15 @@
   import { auth } from "$lib/state/auth.svelte";
 
   let tab = $state("operator");
+  let sidebarOpen = $state(true);
+  let noticeDismissed = $state(false);
+
+  function toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+    setTimeout(() => {
+      window.dispatchEvent(new Event("resize"));
+    }, 50);
+  }
 
   $effect(() => {
     if (auth.role === "juri") {
@@ -116,83 +127,95 @@
 {:else}
   <!-- Operator / Admin Workspace -->
   <div class="flex h-screen overflow-hidden bg-background">
-    <aside class="flex w-56 shrink-0 flex-col border-r border-border bg-[#131c1d]">
-      <div class="flex items-center gap-3 px-5 py-6">
-        <div class="rounded-xl bg-primary p-2 text-primary-foreground">
-          <Cctv size={22} />
-        </div>
-        <div>
-          <div class="text-sm font-semibold tracking-tight">KICAU MANIA</div>
-          <div class="mt-0.5 text-[9px] tracking-[.2em] text-muted-foreground uppercase">
-            {auth.role === "admin" ? "ADMIN WORKSPACE" : "OPERATOR WORKSPACE"}
+    {#if sidebarOpen}
+      <aside class="flex w-56 shrink-0 flex-col border-r border-border bg-[#131c1d] relative z-20">
+        <div class="flex items-center justify-between px-5 py-5">
+          <div class="flex items-center gap-3">
+            <div class="rounded-xl bg-primary p-2 text-primary-foreground">
+              <Cctv size={20} />
+            </div>
+            <div>
+              <div class="text-sm font-semibold tracking-tight">KICAU MANIA</div>
+              <div class="mt-0.5 text-[9px] tracking-[.2em] text-muted-foreground uppercase">
+                {auth.role === "admin" ? "ADMIN WORKSPACE" : "OPERATOR WORKSPACE"}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div class="px-5 pb-2 text-[9px] tracking-[.2em] text-[#627975]">
-        MENU OPERASIONAL
-      </div>
-      <nav class="space-y-1 px-3">
-        {#each visibleNav as item}
           <button
-            onclick={() => navigate(item.id)}
-            class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs transition-colors"
-            class:bg-[#29362b]={tab === item.id}
-            class:text-primary={tab === item.id}
-            class:text-muted-foreground={tab !== item.id}
+            onclick={toggleSidebar}
+            title="Sembunyikan Sidebar"
+            class="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
           >
-            <item.icon size={16} />{item.label}
+            <PanelLeftClose size={16} />
           </button>
-        {/each}
-      </nav>
+        </div>
 
-      <div class="mt-auto border-t border-border p-4">
-        <div class="mb-3 flex items-center justify-between">
-          <div class="min-w-0">
-            <div class="text-xs font-semibold text-zinc-200 truncate">{auth.userName}</div>
-            <div class="text-[10px] text-zinc-500 truncate">{auth.userEmail}</div>
+        <div class="px-5 pb-2 text-[9px] tracking-[.2em] text-[#627975]">
+          MENU OPERASIONAL
+        </div>
+        <nav class="space-y-1 px-3">
+          {#each visibleNav as item}
+            <button
+              onclick={() => navigate(item.id)}
+              class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs transition-colors"
+              class:bg-[#29362b]={tab === item.id}
+              class:text-primary={tab === item.id}
+              class:text-muted-foreground={tab !== item.id}
+            >
+              <item.icon size={16} />{item.label}
+            </button>
+          {/each}
+        </nav>
+
+        <div class="mt-auto border-t border-border p-4">
+          <div class="mb-3 flex items-center justify-between">
+            <div class="min-w-0">
+              <div class="text-xs font-semibold text-zinc-200 truncate">{auth.userName}</div>
+              <div class="text-[10px] text-zinc-500 truncate">{auth.userEmail}</div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onclick={handleLogout}
+              title="Keluar / Ganti Akun"
+              class="text-zinc-400 hover:text-white"
+            >
+              <LogOut size={14} />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onclick={handleLogout}
-            title="Keluar / Ganti Akun"
-            class="text-zinc-400 hover:text-white"
-          >
-            <LogOut size={14} />
-          </Button>
-        </div>
 
-        <div class="flex items-center gap-2 text-[10px] text-muted-foreground">
-          <span
-            class="h-1.5 w-1.5 rounded-full"
-            class:bg-primary={engine.connected}
-            class:bg-destructive={!engine.connected}
-          ></span>
-          <span>{engine.connected ? "Engine terhubung" : "Engine terputus"}</span>
+          <div class="flex items-center justify-between text-[10px] text-muted-foreground">
+            <div class="flex items-center gap-2">
+              <span
+                class="h-1.5 w-1.5 rounded-full"
+                class:bg-primary={engine.connected}
+                class:bg-destructive={!engine.connected}
+              ></span>
+              <span>{engine.connected ? "Engine terhubung" : "Engine terputus"}</span>
+            </div>
+            <button
+              onclick={() => engine.connect()}
+              title="Hubungkan ulang engine"
+              class="rounded p-1 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              <RefreshCw size={12} />
+            </button>
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    {/if}
 
-    <div class="flex min-w-0 flex-1 flex-col">
-      <header
-        class="flex h-13 shrink-0 items-center justify-between border-b border-border px-6"
-      >
-        <div class="text-xs text-muted-foreground">
-          Arena / <span class="text-foreground">{visibleNav.find((n) => n.id === tab)?.label}</span>
-        </div>
-        <div class="flex items-center gap-3">
-          <span class="chip">WINDOWS · LOCAL ENGINE</span>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Hubungkan ulang engine"
-            onclick={() => engine.connect()}
-          >
-            <RefreshCw size={14} />
-          </Button>
-        </div>
-      </header>
+    <div class="relative flex min-w-0 flex-1 flex-col h-full overflow-hidden">
+      <!-- Floating sidebar open button when sidebar is hidden -->
+      {#if !sidebarOpen}
+        <button
+          onclick={toggleSidebar}
+          title="Tampilkan Sidebar"
+          class="absolute top-3 left-3 z-30 flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-[#131c1d]/90 text-zinc-300 shadow-md backdrop-blur hover:bg-[#1f2b2c] hover:text-white transition-all"
+        >
+          <Menu size={16} />
+        </button>
+      {/if}
 
       {#if !["operator", "cameras"].includes(tab)}
         <SessionBar />
@@ -203,16 +226,25 @@
         class="min-h-0 flex-1 {['cameras', 'operator'].includes(tab) ? 'overflow-hidden p-0' : 'overflow-y-auto p-6'}"
       >
         {#if engine.error}
-          <div class="error m-4 mb-2" role="alert">
-            {engine.error}
-            <button class="ml-2 underline" onclick={() => engine.connect()}>
-              Hubungkan ulang
-            </button>
+          <div class="error m-4 mb-2 flex items-center justify-between" role="alert">
+            <div>
+              {engine.error}
+              <button class="ml-2 underline" onclick={() => engine.connect()}>
+                Hubungkan ulang
+              </button>
+            </div>
           </div>
         {/if}
-        {#if engine.notice}
-          <div class="notice m-4 mb-2">
-            {engine.notice}
+        {#if engine.notice && !noticeDismissed}
+          <div class="notice m-4 mb-2 flex items-center justify-between">
+            <span>{engine.notice}</span>
+            <button
+              class="ml-3 rounded p-0.5 text-xs opacity-70 hover:opacity-100 transition-opacity"
+              onclick={() => (noticeDismissed = true)}
+              title="Tutup pesan"
+            >
+              ✕
+            </button>
           </div>
         {/if}
 
@@ -236,13 +268,6 @@
           <OperatorDashboard />
         {/if}
       </main>
-
-      <footer
-        class="flex h-7 shrink-0 items-center justify-between border-t border-border px-6 text-[9px] tracking-wide text-muted-foreground"
-      >
-        <span>KICAU MANIA DESKTOP / SURVEILLANCE WORKSPACE</span>
-        <span>Metrik {engine.metricConnection} · Video RTSP/TCP · Cloud HTTPS</span>
-      </footer>
     </div>
   </div>
 {/if}
