@@ -81,7 +81,7 @@
         arenaName: `Arena ${selectedZone}`,
         roundLabel: "Ronde 01",
         viewerCount: 0,
-        isLive: engine.running,
+        isLive: engine.connected || engine.running,
         quality: "1080P60",
         zone: selectedZone,
         previewGradient: "from-zinc-800 to-zinc-950",
@@ -232,8 +232,13 @@
               <div class="flex shrink-0 items-center gap-1">
                 <span class="font-mono text-[9px] text-zinc-400">
                   {#if engine.running}
+                    <span class="inline-flex items-center gap-1 text-rose-400 font-bold">
+                      <span class="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse"></span>
+                      REC
+                    </span>
+                  {:else if engine.connected}
                     <span class="inline-flex items-center gap-1 text-emerald-400">
-                      <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
                       {engine.playerStatus[slot.channelId]?.fps !== undefined
                         ? `${Number(engine.playerStatus[slot.channelId].fps).toFixed(0)} FPS`
                         : "LIVE"}
@@ -275,7 +280,7 @@
 
             <!-- Video Player Area: Fills remaining height -->
             <div class="relative min-h-0 flex-1 overflow-hidden bg-black/60">
-              {#if engine.running}
+              {#if engine.connected}
                 <NativePlayer
                   id={slot.channelId}
                   visible={!focusId || focusId === slot.channelId}

@@ -75,7 +75,7 @@
       return {
         ...m,
         id: realChan?.id ?? m.id,
-        isLive: engine.running,
+        isLive: engine.connected || engine.running,
         channelIndex: idx,
       };
     });
@@ -302,11 +302,11 @@
         </div>
 
         <div class="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-black">
-          {#if engine.running}
+          {#if engine.connected}
             <NativePlayer id={spotlightStream.id} visible={true} />
           {:else}
             <div class="flex h-full w-full items-center justify-center text-zinc-400 text-sm">
-              Mulai sesi lomba untuk melihat siaran RTSP waktu nyata
+              Menghubungkan ke engine siaran kamera...
             </div>
           {/if}
         </div>
@@ -339,6 +339,8 @@
               <div class="flex shrink-0 items-center gap-1">
                 <span class="font-mono text-[8px] text-zinc-400">
                   {#if engine.running}
+                    <span class="text-rose-400 font-bold animate-pulse">REC</span>
+                  {:else if engine.connected}
                     <span class="text-emerald-400 font-bold">LIVE</span>
                   {:else}
                     <span class="text-zinc-500">STANDBY</span>
@@ -371,7 +373,7 @@
 
             <!-- Video Aspect Canvas -->
             <div class="relative aspect-video w-full overflow-hidden bg-black/60">
-              {#if engine.running}
+              {#if engine.connected}
                 <NativePlayer id={stream.id} visible={true} />
               {:else}
                 <div class="flex h-full w-full items-center justify-center bg-gradient-to-br {stream.previewGradient}">
