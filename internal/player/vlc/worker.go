@@ -122,8 +122,8 @@ func StartWithCache(binary, source string, hwnd uintptr, headers string, cacheMS
 	if cacheMS < 0 || cacheMS > 3000 {
 		return nil, errors.New("Buffer live harus antara 0 dan 3000 ms")
 	}
-	if cacheMS < 200 {
-		cacheMS = 200
+	if cacheMS < 300 {
+		cacheMS = 300
 	}
 	l, e := load(binary)
 	if e != nil {
@@ -170,6 +170,7 @@ func StartWithCache(binary, source string, hwnd uintptr, headers string, cacheMS
 	}
 	l.text("libvlc_media_add_option", media, ":no-audio-time-stretch")
 	if u.Scheme == "rtsp" || u.Scheme == "rtsps" {
+		l.text("libvlc_media_add_option", media, ":rtsp-tcp")
 		l.text("libvlc_media_add_option", media, ":network-caching="+strconv.Itoa(cacheMS))
 		l.text("libvlc_media_add_option", media, ":live-caching="+strconv.Itoa(cacheMS))
 	}

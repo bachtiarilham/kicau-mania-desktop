@@ -98,6 +98,10 @@ func (m *Manager) Sync(id, source, headers string, r model.Rect) error {
 						message = "Menghubungkan ulang player RTSP"
 					case "WAITING_VIDEO":
 						message = "Menunggu frame video dari NVR"
+					case "ENDED":
+						message = "Menghubungkan kembali RTSP…"
+					case "FAILED":
+						message = "Kamera offline atau tidak terjangkau"
 					}
 					m.Emit(model.PlayerStatus{ChannelID: id, State: state, Message: message, FPS: progress.FPS, Decoded: progress.Decoded, Displayed: progress.Displayed, Lost: progress.Lost})
 				})
