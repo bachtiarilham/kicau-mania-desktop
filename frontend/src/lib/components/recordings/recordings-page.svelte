@@ -134,7 +134,38 @@
         : "File tetap tersimpan di engine, termasuk saat internet terputus."}
     </p>
   </div>
-  <Button variant="outline" onclick={load} disabled={busy}>Muat ulang</Button>
+  <div class="flex items-center gap-2">
+    {#if !cloud}
+      <Button
+        variant="outline"
+        onclick={async () => {
+          try {
+            await api.openFolder();
+          } catch (e) {
+            error = message(e);
+          }
+        }}
+        title="Buka folder rekaman di Windows File Explorer"
+      >
+        📁 Buka di File Explorer
+      </Button>
+      <Button
+        variant="outline"
+        onclick={async () => {
+          try {
+            const dir = await api.selectFolder();
+            if (dir) notice = "Folder rekaman aktif: " + dir;
+          } catch (e) {
+            error = message(e);
+          }
+        }}
+        title="Ubah lokasi folder penyimpanan rekaman"
+      >
+        Pilih folder...
+      </Button>
+    {/if}
+    <Button variant="outline" onclick={load} disabled={busy}>Muat ulang</Button>
+  </div>
 </div>
 {#if error}<div class="error mb-4" role="alert">
     {error} <button class="underline" onclick={load}>Coba lagi</button>

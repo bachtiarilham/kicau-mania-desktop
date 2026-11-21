@@ -13,6 +13,7 @@ import (
 	"kicau.desktop/cctv/internal/settings"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -253,11 +254,23 @@ func (d *Desktop) ExportRecording(id string) (string, error) {
 	defer res.Body.Close()
 	ext, label := ".mkv", "Video MKV"
 	d.HidePlayers()
-	dest, e := d.app.Dialog.SaveFile().SetFilename(id+ext).AddFilter(label, "*"+ext).AttachToWindow(d.window).PromptForSingleSelection()
+	dlg := d.app.Dialog.SaveFile().SetFilename(id+ext).AddFilter(label, "*"+ext).AttachToWindow(d.window)
+	d.mu.Lock()
+	if d.config.RecordingsDir != "" {
+		dlg.SetDirectory(d.config.RecordingsDir)
+	}
+	d.mu.Unlock()
+	dest, e := dlg.PromptForSingleSelection()
 	if e != nil || dest == "" {
 		return "", e
 	}
-	f, e := os.CreateTemp(filepath.Dir(dest), ".export-*"+ext)
+	dir := filepath.Dir(dest)
+	d.mu.Lock()
+	d.config.RecordingsDir = dir
+	_ = d.store.Save("desktop.json", d.config, false)
+	d.mu.Unlock()
+
+	f, e := os.CreateTemp(dir, ".export-*"+ext)
 	if e != nil {
 		return "", e
 	}
@@ -277,6 +290,45 @@ func (d *Desktop) ExportRecording(id string) (string, error) {
 		return "", e
 	}
 	return dest, nil
+}
+func (d *Desktop) SelectRecordingsFolder() (string, error) {
+	d.HidePlayers()
+	dlg := d.app.Dialog.OpenFile().
+		CanChooseDirectories(true).
+		CanChooseFiles(false).
+		SetTitle("Pilih Folder Penyimpanan Rekaman Video").
+		AttachToWindow(d.window)
+	d.mu.Lock()
+	cur := d.config.RecordingsDir
+	d.mu.Unlock()
+	if cur != "" {
+		dlg.SetDirectory(cur)
+	}
+	dir, err := dlg.PromptForSingleSelection()
+	if err != nil || dir == "" {
+		return cur, err
+	}
+	d.mu.Lock()
+	d.config.RecordingsDir = dir
+	_ = d.store.Save("desktop.json", d.config, false)
+	d.mu.Unlock()
+	return dir, nil
+}
+func (d *Desktop) OpenRecordingsFolder() error {
+	d.mu.Lock()
+	dir := d.config.RecordingsDir
+	d.mu.Unlock()
+	if dir == "" {
+		dir = filepath.Join(os.Getenv("USERPROFILE"), "Videos", "KicauMania")
+		if os.Getenv("USERPROFILE") == "" {
+			exe, _ := os.Executable()
+			dir = filepath.Join(filepath.Dir(exe), "recordings")
+		}
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	return exec.Command("explorer.exe", dir).Start()
 }
 func (d *Desktop) Preferences() string { b, _ := json.Marshal(d.config); return string(b) }
 func (d *Desktop) LocalRecordings(cursor string) (any, error) {

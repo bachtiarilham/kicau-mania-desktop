@@ -91,7 +91,18 @@ func (s *Store) Load(name string, v any, secret bool) error {
 }
 func Default() model.Config {
 	exe, _ := os.Executable()
-	return model.Config{LocalURL: "http://127.0.0.1:8090", RTSPBase: "rtsp://127.0.0.1:8554", CloudURL: "https://dev.megaallstararena.com/api/v1", VLC: filepath.Join(filepath.Dir(exe), "vlc", "libvlc.dll"), LiveCacheMS: 50}
+	videosDir := filepath.Join(os.Getenv("USERPROFILE"), "Videos", "KicauMania")
+	if os.Getenv("USERPROFILE") == "" {
+		videosDir = filepath.Join(filepath.Dir(exe), "recordings")
+	}
+	return model.Config{
+		LocalURL:      "http://127.0.0.1:8090",
+		RTSPBase:      "rtsp://127.0.0.1:8554",
+		CloudURL:      "https://dev.megaallstararena.com/api/v1",
+		VLC:           filepath.Join(filepath.Dir(exe), "vlc", "libvlc.dll"),
+		LiveCacheMS:   50,
+		RecordingsDir: videosDir,
+	}
 }
 func Validate(c model.Config) error {
 	if c.LiveCacheMS < 0 || c.LiveCacheMS > 3000 {
@@ -100,11 +111,11 @@ func Validate(c model.Config) error {
 	for _, item := range []struct{ raw, scheme string }{{c.LocalURL, "http"}, {c.RTSPBase, "rtsp"}} {
 		u, e := url.Parse(item.raw)
 		if e != nil || u.User != nil || u.Scheme != item.scheme || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
-			return errors.New("Alamat engine harus origin loopback")
+			return errors.New("Alamat engine harus berupa URL origin tanpa path")
 		}
 		ip := net.ParseIP(u.Hostname())
-		if u.Hostname() != "localhost" && (ip == nil || !ip.IsLoopback()) {
-			return errors.New("Engine harus berjalan pada komputer yang sama")
+		if u.Hostname() != "localhost" && (ip == nil || (!ip.IsLoopback() && !ip.IsPrivate())) {
+			return errors.New("Engine harus berjalan pada localhost atau jaringan lokal (LAN)")
 		}
 	}
 	u, e := url.Parse(c.CloudURL)
@@ -113,6 +124,9 @@ func Validate(c model.Config) error {
 	}
 	if !filepath.IsAbs(c.VLC) {
 		return errors.New("Lokasi libvlc.dll harus path absolut")
+	}
+	if c.RecordingsDir != "" && !filepath.IsAbs(c.RecordingsDir) {
+		return errors.New("Lokasi folder rekaman harus path absolut")
 	}
 	return nil
 }

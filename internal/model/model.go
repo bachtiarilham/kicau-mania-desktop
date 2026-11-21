@@ -2,11 +2,12 @@ package model
 
 type Record map[string]any
 type Config struct {
-	LocalURL    string `json:"local_url"`
-	RTSPBase    string `json:"rtsp_base"`
-	CloudURL    string `json:"cloud_url"`
-	VLC         string `json:"vlc"`
-	LiveCacheMS int    `json:"live_cache_ms"`
+	LocalURL      string `json:"local_url"`
+	RTSPBase      string `json:"rtsp_base"`
+	CloudURL      string `json:"cloud_url"`
+	VLC           string `json:"vlc"`
+	LiveCacheMS   int    `json:"live_cache_ms"`
+	RecordingsDir string `json:"recordings_dir,omitempty"`
 }
 type Rect struct {
 	X          int  `json:"x"`

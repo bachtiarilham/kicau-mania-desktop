@@ -55,6 +55,37 @@
     ><label class="field"
       >Lokasi libvlc.dll<Input bind:value={config.vlc} required /></label
     ><label class="field"
+      >Folder rekaman video
+      <div class="flex gap-2">
+        <Input bind:value={config.recordings_dir} placeholder="C:\Users\...\Videos\KicauMania" />
+        <Button
+          type="button"
+          variant="outline"
+          onclick={async () => {
+            try {
+              const dir = await api.selectFolder();
+              if (dir && config) config.recordings_dir = dir;
+            } catch (e) {
+              error = message(e);
+            }
+          }}>Pilih Folder...</Button
+        >
+        <Button
+          type="button"
+          variant="outline"
+          onclick={async () => {
+            try {
+              await api.openFolder();
+            } catch (e) {
+              error = message(e);
+            }
+          }}>Buka di Explorer</Button
+        >
+      </div>
+      <span class="text-xs text-muted-foreground"
+        >Lokasi penyimpanan video rekaman dan ekspor. Pilihan terakhir akan selalu diingat otomatis.</span
+      ></label
+    ><label class="field"
       >Buffer live (ms)<Input type="number" min="0" max="3000" step="1" bind:value={config.live_cache_ms} required />
       <span class="text-xs text-muted-foreground">Default 50 ms. Jika gambar tersendat, coba 100 ms. Nilai 0 lebih rentan tersendat. Berlaku setelah desktop dijalankan ulang.</span></label
     ><Button type="submit" disabled={busy}>Simpan pengaturan</Button>

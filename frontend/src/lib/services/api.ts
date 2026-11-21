@@ -27,6 +27,8 @@ export const api = {
   mute: (id: string, muted: boolean) => call("Mute", id, muted),
   playRecording: (id: string, rect: Row) => call("PlayRecording", id, rect),
   export: (id: string) => call<string>("ExportRecording", id),
+  selectFolder: () => call<string>("SelectRecordingsFolder"),
+  openFolder: () => call("OpenRecordingsFolder"),
   on: (name: string, fn: (v: any) => void) =>
     Events.On(name, (event) => fn(event.data)),
 };
