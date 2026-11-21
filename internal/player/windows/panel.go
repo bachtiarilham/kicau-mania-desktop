@@ -22,14 +22,17 @@ var deleteObject = gdi.NewProc("DeleteObject")
 func New(parent uintptr) (uintptr, error) {
 	class, _ := windows.UTF16PtrFromString("STATIC")
 	name, _ := windows.UTF16PtrFromString("")
-	h, _, _ := create.Call(0, uintptr(unsafe.Pointer(class)), uintptr(unsafe.Pointer(name)), 0x40000000|0x02000000|0x04000000, 0, 0, 1, 1, parent, 0, 0, 0)
+	h, _, _ := create.Call(0, uintptr(unsafe.Pointer(class)), uintptr(unsafe.Pointer(name)), 0x40000000|0x02000000|0x04000000|0x00000004, 0, 0, 1, 1, parent, 0, 0, 0)
 	if h == 0 {
 		return 0, errors.New("Panel video Windows gagal dibuat")
 	}
 	return h, nil
 }
 func Bounds(parent, h uintptr, r model.Rect) {
-	if !r.Visible || r.Width <= 0 || r.Height <= 0 || r.ClipWidth <= 0 || r.ClipHeight <= 0 {
+	SetBounds(parent, h, r, true)
+}
+func SetBounds(parent, h uintptr, r model.Rect, visible bool) {
+	if !visible || !r.Visible || r.Width <= 0 || r.Height <= 0 || r.ClipWidth <= 0 || r.ClipHeight <= 0 {
 		show.Call(h, 0)
 		return
 	}

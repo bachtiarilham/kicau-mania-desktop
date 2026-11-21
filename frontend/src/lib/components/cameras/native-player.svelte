@@ -27,8 +27,11 @@
       return;
     }
     const r = element.getBoundingClientRect();
+    const scrollParent =
+      element.closest(".overflow-y-auto") ||
+      document.querySelector("[data-viewport]");
     const viewport =
-      document.querySelector("[data-viewport]")?.getBoundingClientRect() ||
+      scrollParent?.getBoundingClientRect() ||
       new DOMRect(0, 0, innerWidth, innerHeight);
     const left = Math.max(0, r.left, viewport.left),
       top = Math.max(0, r.top, viewport.top),

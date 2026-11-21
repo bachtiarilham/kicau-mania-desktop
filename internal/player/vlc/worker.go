@@ -122,6 +122,9 @@ func StartWithCache(binary, source string, hwnd uintptr, headers string, cacheMS
 	if cacheMS < 0 || cacheMS > 3000 {
 		return nil, errors.New("Buffer live harus antara 0 dan 3000 ms")
 	}
+	if cacheMS < 200 {
+		cacheMS = 200
+	}
 	l, e := load(binary)
 	if e != nil {
 		return nil, e
@@ -143,7 +146,7 @@ func StartWithCache(binary, source string, hwnd uintptr, headers string, cacheMS
 		// Use the Windows DXVA2/D3D9 path for the embedded multi-camera grid.
 		// Keep decoding on the GPU without sharing D3D11 surfaces with WebView2.
 		// This only changes local presentation; no media is encoded or converted.
-		args = append(args, "--vout=direct3d9", "--avcodec-hw=dxva2", "--avcodec-threads=2")
+		args = append(args, "--vout=direct3d9", "--avcodec-hw=any", "--avcodec-threads=2")
 		args = append(args, "--rtsp-tcp", "--network-caching="+strconv.Itoa(cacheMS), "--live-caching="+strconv.Itoa(cacheMS), "--clock-jitter=0", "--drop-late-frames")
 	}
 	storage := make([]*byte, len(args))

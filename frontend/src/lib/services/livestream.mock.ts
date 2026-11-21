@@ -3,7 +3,7 @@ import type { GantanganStream } from "../models/livestream.model";
 export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
   // --- ZONA A ---
   {
-    id: "gantangan-01",
+    id: "gantangan01",
     gantanganNumber: 1,
     code: "G01",
     title: "Gantangan 01 — Murai Batu Kelas Utama",
@@ -22,7 +22,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-amber-950 via-stone-900 to-zinc-950",
   },
   {
-    id: "gantangan-02",
+    id: "gantangan02",
     gantanganNumber: 2,
     code: "G02",
     title: "Gantangan 02 — Murai Batu Muda Hutan",
@@ -41,7 +41,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-emerald-950 via-zinc-900 to-slate-950",
   },
   {
-    id: "gantangan-03",
+    id: "gantangan03",
     gantanganNumber: 3,
     code: "G03",
     title: "Gantangan 03 — Cucak Ijo Losgan A",
@@ -60,7 +60,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-teal-950 via-neutral-900 to-zinc-950",
   },
   {
-    id: "gantangan-04",
+    id: "gantangan04",
     gantanganNumber: 4,
     code: "G04",
     title: "Gantangan 04 — Kacer Hitam Manis",
@@ -79,7 +79,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-sky-950 via-stone-900 to-zinc-950",
   },
   {
-    id: "gantangan-05",
+    id: "gantangan05",
     gantanganNumber: 5,
     code: "G05",
     title: "Gantangan 05 — Kenari Standar Bebas",
@@ -98,7 +98,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-orange-950 via-zinc-900 to-neutral-950",
   },
   {
-    id: "gantangan-06",
+    id: "gantangan06",
     gantanganNumber: 6,
     code: "G06",
     title: "Gantangan 06 — Lovebird Fighter",
@@ -119,7 +119,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
 
   // --- ZONA B ---
   {
-    id: "gantangan-07",
+    id: "gantangan07",
     gantanganNumber: 7,
     code: "G07",
     title: "Gantangan 07 — Cendet Reguler B",
@@ -138,7 +138,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-blue-950 via-slate-900 to-zinc-950",
   },
   {
-    id: "gantangan-08",
+    id: "gantangan08",
     gantanganNumber: 8,
     code: "G08",
     title: "Gantangan 08 — Anis Merah Teler",
@@ -157,7 +157,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-red-950 via-zinc-900 to-stone-950",
   },
   {
-    id: "gantangan-09",
+    id: "gantangan09",
     gantanganNumber: 9,
     code: "G09",
     title: "Gantangan 09 — Murai Batu Ekor Hitam",
@@ -176,7 +176,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-purple-950 via-neutral-900 to-zinc-950",
   },
   {
-    id: "gantangan-10",
+    id: "gantangan10",
     gantanganNumber: 10,
     code: "G10",
     title: "Gantangan 10 — Branjangan Campuran",
@@ -195,7 +195,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-yellow-950 via-stone-900 to-zinc-950",
   },
   {
-    id: "gantangan-11",
+    id: "gantangan11",
     gantanganNumber: 11,
     code: "G11",
     title: "Gantangan 11 — Cucak Jenggot Melodi",
@@ -213,7 +213,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-teal-950 via-zinc-900 to-slate-950",
   },
   {
-    id: "gantangan-12",
+    id: "gantangan12",
     gantanganNumber: 12,
     code: "G12",
     title: "Gantangan 12 — Kacer Jawa Barat",
@@ -233,7 +233,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
 
   // --- ZONA C ---
   {
-    id: "gantangan-13",
+    id: "gantangan13",
     gantanganNumber: 13,
     code: "G13",
     title: "Gantangan 13 — Murai Batu Ring Nasional",
@@ -251,7 +251,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-indigo-950 via-slate-900 to-zinc-950",
   },
   {
-    id: "gantangan-14",
+    id: "gantangan14",
     gantanganNumber: 14,
     code: "G14",
     title: "Gantangan 14 — Kenari Kalitan",
@@ -269,7 +269,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-amber-950 via-stone-900 to-zinc-950",
   },
   {
-    id: "gantangan-15",
+    id: "gantangan15",
     gantanganNumber: 15,
     code: "G15",
     title: "Gantangan 15 — Cucak Hijau Mini",
@@ -287,7 +287,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-emerald-950 via-neutral-900 to-slate-950",
   },
   {
-    id: "gantangan-16",
+    id: "gantangan16",
     gantanganNumber: 16,
     code: "G16",
     title: "Gantangan 16 — Pleci Dakun",
@@ -305,7 +305,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-green-950 via-zinc-900 to-stone-950",
   },
   {
-    id: "gantangan-17",
+    id: "gantangan17",
     gantanganNumber: 17,
     code: "G17",
     title: "Gantangan 17 — Murai Batu Borneo",
@@ -323,7 +323,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-cyan-950 via-slate-900 to-zinc-950",
   },
   {
-    id: "gantangan-18",
+    id: "gantangan18",
     gantanganNumber: 18,
     code: "G18",
     title: "Gantangan 18 — Anis Kembang",
@@ -343,7 +343,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
 
   // --- ZONA D ---
   {
-    id: "gantangan-19",
+    id: "gantangan19",
     gantanganNumber: 19,
     code: "G19",
     title: "Gantangan 19 — Murai Batu Masteran",
@@ -361,7 +361,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-fuchsia-950 via-zinc-900 to-slate-950",
   },
   {
-    id: "gantangan-20",
+    id: "gantangan20",
     gantanganNumber: 20,
     code: "G20",
     title: "Gantangan 20 — Kacer Poci Juara",
@@ -379,7 +379,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-slate-950 via-stone-900 to-zinc-950",
   },
   {
-    id: "gantangan-21",
+    id: "gantangan21",
     gantanganNumber: 21,
     code: "G21",
     title: "Gantangan 21 — Cucak Rawa Alami",
@@ -397,7 +397,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-teal-950 via-neutral-900 to-zinc-950",
   },
   {
-    id: "gantangan-22",
+    id: "gantangan22",
     gantanganNumber: 22,
     code: "G22",
     title: "Gantangan 22 — Cendet Madura",
@@ -415,7 +415,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-orange-950 via-stone-900 to-zinc-950",
   },
   {
-    id: "gantangan-23",
+    id: "gantangan23",
     gantanganNumber: 23,
     code: "G23",
     title: "Gantangan 23 — Kenari Yorkshire",
@@ -433,7 +433,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     previewGradient: "from-yellow-950 via-zinc-900 to-neutral-950",
   },
   {
-    id: "gantangan-24",
+    id: "gantangan24",
     gantanganNumber: 24,
     code: "G24",
     title: "Gantangan 24 — Murai Batu Ekor Putih",

@@ -373,8 +373,12 @@
 
             <!-- Video Aspect Canvas -->
             <div class="relative aspect-video w-full overflow-hidden bg-black/60">
-              {#if engine.connected}
+              {#if engine.connected && (engine.channels.length === 0 || engine.channels.some((c) => c.id === stream.id))}
                 <NativePlayer id={stream.id} visible={true} />
+              {:else if engine.connected}
+                <div class="flex h-full w-full items-center justify-center bg-[#090f10] text-zinc-600 text-xs">
+                  <span>Kamera tidak terpasang</span>
+                </div>
               {:else}
                 <div class="flex h-full w-full items-center justify-center bg-gradient-to-br {stream.previewGradient}">
                   <span class="text-[11px] font-bold text-zinc-400">
@@ -452,8 +456,12 @@
 
             <!-- Video Player Area: Dynamically fills available vertical space -->
             <div class="relative min-h-0 flex-1 overflow-hidden bg-black/60">
-              {#if engine.connected}
+              {#if engine.connected && (engine.channels.length === 0 || engine.channels.some((c) => c.id === stream.id))}
                 <NativePlayer id={stream.id} visible={true} class="h-full w-full" />
+              {:else if engine.connected}
+                <div class="flex h-full w-full items-center justify-center bg-[#090f10] text-zinc-600 text-xs">
+                  <span>Kamera tidak terpasang</span>
+                </div>
               {:else}
                 <div class="flex h-full w-full items-center justify-center bg-gradient-to-br {stream.previewGradient}">
                   <span class="text-[11px] font-bold text-zinc-400">

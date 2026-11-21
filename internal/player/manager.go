@@ -19,6 +19,7 @@ type pane struct {
 	stop      chan struct{}
 	bounds    model.Rect
 	hasBounds bool
+	ready     bool
 }
 type Manager struct {
 	mu          sync.Mutex
@@ -63,7 +64,7 @@ func (m *Manager) Sync(id, source, headers string, r model.Rect) error {
 			created = err == nil
 		}
 		if err == nil && (!p.hasBounds || p.bounds != r) {
-			native.Bounds(parent, p.handle, r)
+			native.SetBounds(parent, p.handle, r, p.ready)
 			p.bounds, p.hasBounds = r, true
 		}
 	})
@@ -77,6 +78,17 @@ func (m *Manager) Sync(id, source, headers string, r model.Rect) error {
 			for delay := time.Second; ; {
 				started := time.Now()
 				w, e := vlc.StartWithCache(m.Binary, source, p.handle, headers, m.LiveCacheMS, func(progress vlc.Progress) {
+					isReady := progress.State == "PLAYING" && progress.Displayed > 0
+					p.mu.Lock()
+					if isReady != p.ready && !p.closed && p.handle != 0 {
+						p.ready = isReady
+						parent := m.Parent()
+						application.InvokeSync(func() {
+							native.SetBounds(parent, p.handle, p.bounds, isReady)
+						})
+					}
+					p.mu.Unlock()
+
 					state := progress.State
 					message := ""
 					switch state {
@@ -117,6 +129,12 @@ func (m *Manager) Sync(id, source, headers string, r model.Rect) error {
 					}
 					w.Close()
 				}
+				p.mu.Lock()
+				p.ready = false
+				if p.handle != 0 && !p.closed {
+					application.InvokeSync(func() { native.Hide(p.handle) })
+				}
+				p.mu.Unlock()
 				if !strings.HasPrefix(source, "rtsp://") && !strings.HasPrefix(source, "rtsps://") {
 					return
 				}
@@ -197,6 +215,7 @@ func (m *Manager) Hide() {
 			if p.handle != 0 {
 				native.Hide(p.handle)
 				p.hasBounds = false
+				p.ready = false
 			}
 			p.mu.Unlock()
 		}
