@@ -212,30 +212,25 @@ func (d *Desktop) SyncPlayer(id string, r model.Rect) error {
 			State    string   `json:"state"`
 			Channels []string `json:"channels"`
 		}
-		if e := d.engine.Call(d.ctx, "GET", "/api/v1/media/sessions/current", nil, &fetched); e != nil {
-			errStr := strings.ToLower(e.Error())
-			if strings.Contains(errStr, "method not allowed") || strings.Contains(errStr, "405") || strings.Contains(errStr, "404") {
-				return errors.New("Kamera belum siap / sesi belum aktif")
-			}
-			return e
+		if e := d.engine.Call(d.ctx, "GET", "/api/v1/media/sessions/current", nil, &fetched); e == nil {
+			d.sessionMu.Lock()
+			d.cachedSession = fetched
+			d.cachedSessionAt = time.Now()
+			session = fetched
+			d.sessionMu.Unlock()
 		}
-		d.sessionMu.Lock()
-		d.cachedSession = fetched
-		d.cachedSessionAt = time.Now()
-		session = fetched
-		d.sessionMu.Unlock()
 	}
 
-	if session.State != "RUNNING" && session.State != "DEGRADED" {
-		return errors.New("Mulai sesi sebelum menonton kamera")
+	if (session.State == "RUNNING" || session.State == "DEGRADED") && len(session.Channels) > 0 {
+		found := false
+		for _, v := range session.Channels {
+			found = found || v == id
+		}
+		if !found {
+			return errors.New("Kamera bukan bagian sesi aktif")
+		}
 	}
-	found := false
-	for _, v := range session.Channels {
-		found = found || v == id
-	}
-	if !found {
-		return errors.New("Kamera bukan bagian sesi aktif")
-	}
+
 	return d.players.Sync(id, strings.TrimRight(d.config.RTSPBase, "/")+"/"+id, "", r)
 }
 func (d *Desktop) StopPlayer(id string)             { d.players.Stop(id) }
