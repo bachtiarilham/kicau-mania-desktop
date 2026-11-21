@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Desktop struct {
@@ -31,6 +32,13 @@ type Desktop struct {
 	app     *application.App
 	window  *application.WebviewWindow
 	ctx     context.Context
+
+	sessionMu       sync.Mutex
+	cachedSession   struct {
+		State    string   `json:"state"`
+		Channels []string `json:"channels"`
+	}
+	cachedSessionAt time.Time
 }
 
 func New() (*Desktop, error) {
@@ -193,17 +201,31 @@ func (d *Desktop) SyncPlayer(id string, r model.Rect) error {
 	if !player.ValidID(id) {
 		return errors.New("ID kamera tidak valid")
 	}
-	var session struct {
-		State    string   `json:"state"`
-		Channels []string `json:"channels"`
-	}
-	if e := d.engine.Call(d.ctx, "GET", "/api/v1/media/sessions/current", nil, &session); e != nil {
-		errStr := strings.ToLower(e.Error())
-		if strings.Contains(errStr, "method not allowed") || strings.Contains(errStr, "405") || strings.Contains(errStr, "404") {
-			return errors.New("Kamera belum siap / sesi belum aktif")
+
+	d.sessionMu.Lock()
+	session := d.cachedSession
+	cached := time.Since(d.cachedSessionAt) < 1500*time.Millisecond
+	d.sessionMu.Unlock()
+
+	if !cached {
+		var fetched struct {
+			State    string   `json:"state"`
+			Channels []string `json:"channels"`
 		}
-		return e
+		if e := d.engine.Call(d.ctx, "GET", "/api/v1/media/sessions/current", nil, &fetched); e != nil {
+			errStr := strings.ToLower(e.Error())
+			if strings.Contains(errStr, "method not allowed") || strings.Contains(errStr, "405") || strings.Contains(errStr, "404") {
+				return errors.New("Kamera belum siap / sesi belum aktif")
+			}
+			return e
+		}
+		d.sessionMu.Lock()
+		d.cachedSession = fetched
+		d.cachedSessionAt = time.Now()
+		session = fetched
+		d.sessionMu.Unlock()
 	}
+
 	if session.State != "RUNNING" && session.State != "DEGRADED" {
 		return errors.New("Mulai sesi sebelum menonton kamera")
 	}
