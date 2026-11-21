@@ -29,6 +29,8 @@ export const api = {
   export: (id: string) => call<string>("ExportRecording", id),
   selectFolder: () => call<string>("SelectRecordingsFolder"),
   openFolder: () => call("OpenRecordingsFolder"),
+  saveSession: (sessionID: string, sessionName: string, targetDir: string, format: string) =>
+    call<string[]>("SaveSessionRecordings", sessionID, sessionName, targetDir, format),
   on: (name: string, fn: (v: any) => void) =>
     Events.On(name, (event) => fn(event.data)),
 };

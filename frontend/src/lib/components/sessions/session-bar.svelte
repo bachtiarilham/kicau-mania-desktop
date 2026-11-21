@@ -28,6 +28,12 @@
   let now = $state(Date.now());
 
   onMount(() => {
+    void api
+      .config()
+      .then((cfg) => {
+        if (cfg?.recordings_dir) storageDir = cfg.recordings_dir;
+      })
+      .catch(() => {});
     const t = setInterval(() => (now = Date.now()), 1000);
     return () => clearInterval(t);
   });
@@ -84,13 +90,36 @@
     if (!sessionName) {
       sessionName = generateSessionName();
     }
+    void api
+      .config()
+      .then((cfg) => {
+        if (cfg?.recordings_dir) storageDir = cfg.recordings_dir;
+      })
+      .catch(() => {});
     confirm = true;
   }
 
   async function handleConfirmSave() {
     confirm = false;
+    const currentSessionId = engine.session?.id;
     await engine.stop();
-    engine.notice = `Rekaman '${sessionName}' (${selectedFormat.toUpperCase()}) disimpan di ${storageDir} dan masuk antrean cloud.`;
+    engine.notice = `Menyimpan rekaman sesi '${sessionName}' (${selectedFormat.toUpperCase()}) ke ${storageDir}...`;
+
+    if (currentSessionId) {
+      void api
+        .saveSession(currentSessionId, sessionName, storageDir, selectedFormat)
+        .then((savedFiles) => {
+          if (Array.isArray(savedFiles) && savedFiles.length > 0) {
+            engine.notice = `Berhasil menyimpan ${savedFiles.length} file rekaman sesi '${sessionName}' ke: ${storageDir}`;
+          }
+        })
+        .catch((err) => {
+          console.warn("Gagal simpan rekaman sesi:", err);
+          engine.error =
+            "Gagal mengekspor rekaman ke folder tujuan: " +
+            (err?.message || String(err));
+        });
+    }
   }
 </script>
 
@@ -262,11 +291,45 @@
       <!-- Lokasi Penyimpanan Harddisk -->
       <div class="space-y-1.5">
         <Label class="text-xs font-semibold text-foreground">Lokasi Harddisk</Label>
-        <div class="rounded-lg bg-[#101716] border border-border px-3 py-2 text-xs font-mono text-muted-foreground">
-          {storageDir}
+        <div class="flex gap-2">
+          <Input
+            bind:value={storageDir}
+            placeholder="D:\KicauRecordings"
+            class="bg-[#101716] border-border text-xs font-mono"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onclick={async () => {
+              try {
+                const dir = await api.selectFolder();
+                if (dir) storageDir = dir;
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+          >
+            Pilih Folder...
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onclick={async () => {
+              try {
+                await api.openFolder();
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+            title="Buka folder di File Explorer"
+          >
+            📁 Buka
+          </Button>
         </div>
         <p class="text-[10px] text-muted-foreground">
-          Folder penyimpanan lokal terkunci sesuai konfigurasi <code>.env</code> engine backend.
+          Folder tujuan penyimpanan video rekaman sesi. Pilihan terakhir akan selalu diingat otomatis.
         </p>
       </div>
     </div>
