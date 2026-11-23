@@ -61,7 +61,7 @@ class RoundStore {
         sessionName: this.sessionName,
         startTime: this.startTime,
         endTime: this.endTime,
-        jurors: this.jurors,
+        jurors: [...this.jurors],
         durationSeconds: this.durationSeconds,
         remainingSeconds: this.remainingSeconds,
         state: this.state,

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
   import {
     Play,
     Square,
@@ -32,6 +33,8 @@
   let selectedFilter = $state<"all" | "A" | "B" | "C" | "D">("all");
   let spotlightId = $state<string | null>(null);
   let showEditModal = $state(false);
+  let openingEditModal = $state(false);
+  let disposed = false;
   let audibleId = $state<string | null>(null);
   let zoomed = $state<Record<string, number>>({});
 
@@ -43,15 +46,35 @@
   let editDuration = $state(roundStore.durationSeconds);
   let editJurors = $state([...roundStore.jurors]);
 
-  function openEditModal() {
+  async function openEditModal() {
+    if (openingEditModal || showEditModal) return;
     editEventName = roundStore.eventName;
     editSessionName = roundStore.sessionName;
     editStartTime = roundStore.startTime;
     editEndTime = roundStore.endTime;
     editDuration = roundStore.durationSeconds;
     editJurors = [...roundStore.jurors];
-    showEditModal = true;
+    openingEditModal = true;
+    engine.overlay = true;
+    try {
+      await api.hidePlayers();
+    } catch {
+      // Player geometry also hides native windows while the overlay is active.
+    } finally {
+      if (!disposed) showEditModal = true;
+      openingEditModal = false;
+    }
   }
+
+  function closeEditModal() {
+    showEditModal = false;
+    engine.overlay = false;
+  }
+
+  onDestroy(() => {
+    disposed = true;
+    if (showEditModal || openingEditModal) engine.overlay = false;
+  });
 
   function saveConfig() {
     roundStore.updateConfig({
@@ -62,7 +85,7 @@
       durationSeconds: Number(editDuration) || 150,
       jurors: editJurors,
     });
-    showEditModal = false;
+    closeEditModal();
   }
 
   // Quick preset duration
@@ -148,6 +171,7 @@
           variant="outline"
           size="sm"
           onclick={openEditModal}
+          disabled={openingEditModal}
           class="h-7 border-border bg-accent text-xs text-foreground hover:bg-accent hover:text-foreground"
         >
           <Settings class="h-3 w-3" />
@@ -541,7 +565,7 @@
       </div>
 
       <div class="mt-6 flex items-center justify-end gap-2 border-t border-border pt-4">
-        <Button variant="ghost" size="sm" onclick={() => (showEditModal = false)}>
+        <Button variant="ghost" size="sm" onclick={closeEditModal}>
           Batal
         </Button>
         <Button size="sm" onclick={saveConfig} class="bg-primary text-primary-foreground">
