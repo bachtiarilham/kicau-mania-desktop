@@ -340,6 +340,117 @@ func (d *Desktop) OpenRecordingsFolder() error {
 	}
 	return exec.Command("explorer.exe", dir).Start()
 }
+
+func sanitizeFilename(name string) string {
+	r := strings.NewReplacer("/", "_", "\\", "_", ":", "_", "*", "_", "?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
+	return r.Replace(strings.TrimSpace(name))
+}
+
+func (d *Desktop) SaveSessionRecordings(sessionID, sessionName, targetDir, format string) ([]string, error) {
+	if sessionID == "" {
+		return nil, errors.New("ID sesi tidak boleh kosong")
+	}
+	if targetDir == "" {
+		d.mu.Lock()
+		targetDir = d.config.RecordingsDir
+		d.mu.Unlock()
+	}
+	if targetDir == "" {
+		targetDir = filepath.Join(os.Getenv("USERPROFILE"), "Videos", "KicauMania")
+		if os.Getenv("USERPROFILE") == "" {
+			exe, _ := os.Executable()
+			targetDir = filepath.Join(filepath.Dir(exe), "recordings")
+		}
+	}
+
+	d.mu.Lock()
+	d.config.RecordingsDir = targetDir
+	_ = d.store.Save("desktop.json", d.config, false)
+	d.mu.Unlock()
+
+	if sessionName == "" {
+		sessionName = sessionID
+	}
+	safeSessionName := sanitizeFilename(sessionName)
+	sessionFolder := filepath.Join(targetDir, safeSessionName)
+	if err := os.MkdirAll(sessionFolder, 0755); err != nil {
+		return nil, err
+	}
+
+	type recItem struct {
+		ID        string `json:"id"`
+		ChannelID string `json:"channel_id"`
+		State     string `json:"state"`
+	}
+	var readyItems []recItem
+
+	// Poll up to 15 times (30 seconds) waiting for recordings to be ready
+	for attempt := 0; attempt < 15; attempt++ {
+		var page struct {
+			Items []recItem `json:"items"`
+		}
+		err := d.engine.Call(d.ctx, "GET", "/api/v1/recordings?limit=50&session_id="+url.QueryEscape(sessionID), nil, &page)
+		if err == nil && len(page.Items) > 0 {
+			allReady := true
+			for _, it := range page.Items {
+				if it.State != "READY" && it.State != "UPLOADED" {
+					allReady = false
+					break
+				}
+			}
+			if allReady {
+				readyItems = page.Items
+				break
+			}
+			readyItems = page.Items
+		}
+		time.Sleep(2 * time.Second)
+	}
+
+	if len(readyItems) == 0 {
+		return nil, errors.New("Tidak ada rekaman yang siap untuk sesi ini")
+	}
+
+	var savedFiles []string
+	ext := ".mkv"
+	if strings.ToLower(format) == "mp4" {
+		ext = ".mp4"
+	}
+
+	for _, item := range readyItems {
+		if item.ID == "" {
+			continue
+		}
+		chName := item.ChannelID
+		if chName == "" {
+			chName = item.ID
+		}
+		destFile := filepath.Join(sessionFolder, chName+ext)
+
+		res, err := d.engine.File(d.ctx, item.ID)
+		if err != nil {
+			continue
+		}
+
+		tmpFile := destFile + ".part"
+		f, err := os.Create(tmpFile)
+		if err != nil {
+			res.Body.Close()
+			continue
+		}
+		_, copyErr := io.Copy(f, res.Body)
+		f.Close()
+		res.Body.Close()
+		if copyErr != nil {
+			os.Remove(tmpFile)
+			continue
+		}
+		_ = os.Rename(tmpFile, destFile)
+		savedFiles = append(savedFiles, destFile)
+	}
+
+	return savedFiles, nil
+}
 func (d *Desktop) Preferences() string { b, _ := json.Marshal(d.config); return string(b) }
 func (d *Desktop) LocalRecordings(cursor string) (any, error) {
 	return d.Engine("GET", "/api/v1/recordings?limit=25&cursor="+url.QueryEscape(cursor), nil)
