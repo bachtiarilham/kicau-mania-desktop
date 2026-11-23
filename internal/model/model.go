@@ -10,15 +10,16 @@ type Config struct {
 	RecordingsDir string `json:"recordings_dir,omitempty"`
 }
 type Rect struct {
-	X          int  `json:"x"`
-	Y          int  `json:"y"`
-	Width      int  `json:"width"`
-	Height     int  `json:"height"`
-	ClipX      int  `json:"clip_x"`
-	ClipY      int  `json:"clip_y"`
-	ClipWidth  int  `json:"clip_width"`
-	ClipHeight int  `json:"clip_height"`
-	Visible    bool `json:"visible"`
+	X            int  `json:"x"`
+	Y            int  `json:"y"`
+	Width        int  `json:"width"`
+	Height       int  `json:"height"`
+	ClipX        int  `json:"clip_x"`
+	ClipY        int  `json:"clip_y"`
+	ClipWidth    int  `json:"clip_width"`
+	ClipHeight   int  `json:"clip_height"`
+	Visible      bool `json:"visible"`
+	DevicePixels bool `json:"device_pixels,omitempty"`
 }
 type PlayerStatus struct {
 	ChannelID string  `json:"channel_id"`

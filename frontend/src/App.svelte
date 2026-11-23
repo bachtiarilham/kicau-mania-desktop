@@ -91,44 +91,32 @@
   <!-- Fullscreen Login Page -->
   <LoginPage />
 {:else if auth.role === "juri"}
-  <!-- Pure Juri Display (100% Fullscreen Grid 3x2 + Juri HUD) -->
-  <div class="flex h-screen w-screen flex-col overflow-hidden bg-[#0c1011] text-zinc-100 select-none">
-    <header class="flex h-12 shrink-0 items-center justify-between border-b border-white/10 bg-[#12181a] px-4">
-      <div class="flex items-center gap-2.5">
-        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 font-bold text-xs ring-1 ring-amber-500/30">
-          KM
-        </span>
-        <div class="flex items-center gap-2">
-          <span class="text-sm font-bold text-white">Layar Penilaian Dewan Juri</span>
-          <span class="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300 uppercase">
-            JURI ARENA
-          </span>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <span class="text-xs text-zinc-400 font-medium hidden sm:inline">{auth.userName}</span>
-        <Button
-          variant="outline"
-          size="sm"
-          onclick={handleLogout}
-          class="h-7 text-xs border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white"
-        >
-          <LogOut class="size-3.5" />
-          <span>Ganti Akun</span>
-        </Button>
-      </div>
-    </header>
-
+  <!-- Layar penilaian juri -->
+  <div class="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground select-none">
     <main class="min-h-0 flex-1 overflow-hidden">
-      <ZoneGrid3x2 showZoneBar={true} showJuriHud={true} />
+      <ZoneGrid3x2>
+        {#snippet identity(collapsed)}
+          <header class="flex shrink-0 flex-col items-center gap-2 border-b border-border py-3 text-center {collapsed ? 'px-1' : 'px-4'}">
+            <span class="grid size-7 place-items-center rounded-lg bg-amber-500/20 text-xs font-bold text-amber-700" aria-hidden="true">KM</span>
+            {#if !collapsed}
+              <h1 class="text-sm font-bold tracking-normal">Layar Penilaian Dewan Juri</h1>
+              <span class="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-700">JURI ARENA</span>
+              <span class="max-w-full truncate text-xs font-medium text-muted-foreground">{auth.userName}</span>
+            {/if}
+            <Button variant="outline" size={collapsed ? "icon-sm" : "sm"} onclick={handleLogout} aria-label="Ganti Akun" title="Ganti Akun">
+              <LogOut class="size-3.5" />
+              {#if !collapsed}Ganti Akun{/if}
+            </Button>
+          </header>
+        {/snippet}
+      </ZoneGrid3x2>
     </main>
   </div>
 {:else}
   <!-- Operator / Admin Workspace -->
   <div class="flex h-screen overflow-hidden bg-background">
     {#if sidebarOpen}
-      <aside class="flex w-56 shrink-0 flex-col border-r border-border bg-[#131c1d] relative z-20">
+      <aside class="flex w-56 shrink-0 flex-col border-r border-border bg-card relative z-20">
         <div class="flex items-center justify-between px-5 py-5">
           <div class="flex items-center gap-3">
             <div class="rounded-xl bg-primary p-2 text-primary-foreground">
@@ -144,13 +132,13 @@
           <button
             onclick={toggleSidebar}
             title="Sembunyikan Sidebar"
-            class="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+            class="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             <PanelLeftClose size={16} />
           </button>
         </div>
 
-        <div class="px-5 pb-2 text-[9px] tracking-[.2em] text-[#627975]">
+        <div class="px-5 pb-2 text-[9px] tracking-[.2em] text-muted-foreground">
           MENU OPERASIONAL
         </div>
         <nav class="space-y-1 px-3">
@@ -158,7 +146,7 @@
             <button
               onclick={() => navigate(item.id)}
               class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs transition-colors"
-              class:bg-[#29362b]={tab === item.id}
+              class:bg-accent={tab === item.id}
               class:text-primary={tab === item.id}
               class:text-muted-foreground={tab !== item.id}
             >
@@ -170,15 +158,15 @@
         <div class="mt-auto border-t border-border p-4">
           <div class="mb-3 flex items-center justify-between">
             <div class="min-w-0">
-              <div class="text-xs font-semibold text-zinc-200 truncate">{auth.userName}</div>
-              <div class="text-[10px] text-zinc-500 truncate">{auth.userEmail}</div>
+              <div class="text-xs font-semibold text-foreground truncate">{auth.userName}</div>
+              <div class="text-[10px] text-muted-foreground truncate">{auth.userEmail}</div>
             </div>
             <Button
               variant="ghost"
               size="icon-xs"
               onclick={handleLogout}
               title="Keluar / Ganti Akun"
-              class="text-zinc-400 hover:text-white"
+              class="text-muted-foreground hover:text-foreground"
             >
               <LogOut size={14} />
             </Button>
@@ -196,7 +184,7 @@
             <button
               onclick={() => engine.connect()}
               title="Hubungkan ulang engine"
-              class="rounded p-1 hover:bg-white/10 hover:text-white transition-colors"
+              class="rounded p-1 hover:bg-accent hover:text-foreground transition-colors"
             >
               <RefreshCw size={12} />
             </button>
@@ -211,7 +199,7 @@
         <button
           onclick={toggleSidebar}
           title="Tampilkan Sidebar"
-          class="absolute top-3 left-3 z-30 flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 bg-[#131c1d]/90 text-zinc-300 shadow-md backdrop-blur hover:bg-[#1f2b2c] hover:text-white transition-all"
+          class="absolute top-3 left-3 z-30 flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-foreground shadow-md backdrop-blur hover:bg-accent hover:text-foreground transition-all"
         >
           <Menu size={16} />
         </button>

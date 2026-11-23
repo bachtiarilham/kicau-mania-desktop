@@ -109,38 +109,38 @@
   {/if}
 {/snippet}
 
-<div class="flex h-full w-full flex-col overflow-hidden bg-[#0c1011] text-zinc-100 select-none">
+<div class="flex h-full w-full flex-col overflow-hidden bg-background text-foreground select-none">
   <!-- Top Section: Modern Tactical Match Control Panel (Upgraded Image 2) -->
-  <section class="shrink-0 border-b border-white/10 bg-[#12181a] px-3 py-2 sm:px-4">
+  <section class="shrink-0 border-b border-border bg-card px-3 py-2 sm:px-4">
     <div class="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
       <!-- Left: Event, Sesi, & Schedule Meta -->
       <div class="flex flex-wrap items-center gap-2.5">
-        <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-black/40 px-2.5 py-1.5 shadow-sm">
+        <div class="flex items-center gap-2 rounded-xl border border-border bg-muted px-2.5 py-1.5 shadow-sm">
           <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-black shadow-md shadow-amber-500/20">
             <Trophy class="h-4 w-4" />
           </div>
           <div>
-            <div class="text-[9px] font-bold tracking-widest text-amber-400 uppercase">
+            <div class="text-[9px] font-bold tracking-widest text-amber-700 uppercase">
               Nama Event
             </div>
-            <div class="text-xs font-extrabold tracking-tight text-white">
+            <div class="text-xs font-extrabold tracking-tight text-foreground">
               {roundStore.eventName}
             </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-2 rounded-xl border border-white/10 bg-black/40 px-2.5 py-1.5 shadow-sm">
+        <div class="flex items-center gap-2 rounded-xl border border-border bg-muted px-2.5 py-1.5 shadow-sm">
           <div>
-            <div class="text-[9px] font-bold tracking-widest text-zinc-400 uppercase">
+            <div class="text-[9px] font-bold tracking-widest text-muted-foreground uppercase">
               Babak Penilaian
             </div>
-            <div class="text-xs font-black text-amber-300">
+            <div class="text-xs font-black text-amber-700">
               {roundStore.sessionName}
             </div>
           </div>
-          <span class="text-zinc-600">·</span>
-          <div class="font-mono text-xs text-zinc-300">
-            <span class="text-zinc-400">{roundStore.startTime}</span> – <span class="text-zinc-200">{roundStore.endTime}</span>
+          <span class="text-muted-foreground">·</span>
+          <div class="font-mono text-xs text-foreground">
+            <span class="text-muted-foreground">{roundStore.startTime}</span> – <span class="text-foreground">{roundStore.endTime}</span>
           </div>
         </div>
 
@@ -148,7 +148,7 @@
           variant="outline"
           size="sm"
           onclick={openEditModal}
-          class="h-7 border-white/10 bg-white/5 text-xs text-zinc-300 hover:bg-white/10 hover:text-white"
+          class="h-7 border-border bg-accent text-xs text-foreground hover:bg-accent hover:text-foreground"
         >
           <Settings class="h-3 w-3" />
           <span>Atur Lomba & Juri</span>
@@ -158,12 +158,12 @@
       <!-- Center & Right: Tactical Big START / STOP Buttons & Giant Timer -->
       <div class="flex flex-wrap items-center gap-3">
         <!-- Duration Presets -->
-        <div class="hidden items-center gap-1 rounded-lg border border-white/10 bg-black/40 p-0.5 xl:flex">
+        <div class="hidden items-center gap-1 rounded-lg border border-border bg-muted p-0.5 xl:flex">
           {#each [120, 150, 180, 300] as sec}
             <button
               type="button"
               onclick={() => setDurationPreset(sec)}
-              class="rounded px-2 py-0.5 font-mono text-[10px] font-semibold transition {roundStore.durationSeconds === sec ? 'bg-white/15 text-white' : 'text-zinc-400 hover:text-zinc-200'}"
+              class="rounded px-2 py-0.5 font-mono text-[10px] font-semibold transition {roundStore.durationSeconds === sec ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}"
             >
               {sec}s
             </button>
@@ -172,14 +172,14 @@
 
         <!-- Giant Synchronized Countdown Timer -->
         <div
-          class="flex items-center gap-2.5 rounded-xl border px-3 py-1 shadow-inner transition-all {roundStore.state === 'RUNNING' ? 'border-emerald-500/50 bg-emerald-950/30' : roundStore.remainingSeconds === 0 ? 'border-red-500/80 bg-red-950/40 animate-pulse' : 'border-white/10 bg-black/60'}"
+          class="flex items-center gap-2.5 rounded-xl border px-3 py-1 shadow-inner transition-all {roundStore.state === 'RUNNING' ? 'border-emerald-500/50 bg-emerald-50' : roundStore.remainingSeconds === 0 ? 'border-red-500/80 bg-red-50 animate-pulse' : 'border-border bg-muted'}"
         >
           <div class="flex flex-col items-center">
-            <span class="text-[8px] font-bold tracking-widest text-zinc-400 uppercase">
+            <span class="text-[8px] font-bold tracking-widest text-muted-foreground uppercase">
               Timer Sisa
             </span>
             <span
-              class="font-mono text-2xl font-black tracking-tight {roundStore.state === 'RUNNING' ? 'text-emerald-400' : roundStore.remainingSeconds === 0 ? 'text-red-500' : 'text-white'}"
+              class="font-mono text-2xl font-black tracking-tight {roundStore.state === 'RUNNING' ? 'text-emerald-700' : roundStore.remainingSeconds === 0 ? 'text-red-700' : 'text-foreground'}"
             >
               {roundStore.remainingSeconds}s
             </span>
@@ -188,7 +188,7 @@
           <button
             type="button"
             onclick={() => roundStore.resetRound()}
-            class="flex h-6 w-6 items-center justify-center rounded-lg bg-white/5 text-zinc-400 transition hover:bg-white/15 hover:text-white"
+            class="flex h-6 w-6 items-center justify-center rounded-lg bg-accent text-muted-foreground transition hover:bg-accent hover:text-foreground"
             title="Reset timer ke awal"
           >
             <RotateCcw class="h-3 w-3" />
@@ -207,8 +207,8 @@
             {#if roundStore.state === "RUNNING"}
               <span class="absolute -inset-1 rounded-full bg-emerald-500/20 animate-ping"></span>
             {/if}
-            <div class="flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
-              <Play class="h-3 w-3 fill-current text-white ml-0.5" />
+            <div class="flex h-5 w-5 items-center justify-center rounded-full bg-accent">
+              <Play class="h-3 w-3 fill-current text-foreground ml-0.5" />
             </div>
             <span>{roundStore.state === "RUNNING" ? "BERJALAN" : "START"}</span>
           </button>
@@ -220,8 +220,8 @@
             onclick={() => roundStore.stopRound()}
             class="flex h-10 items-center gap-2 rounded-full px-5 text-xs font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 shadow-red-600/30 hover:shadow-red-600/50"
           >
-            <div class="flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
-              <Square class="h-3 w-3 fill-current text-white" />
+            <div class="flex h-5 w-5 items-center justify-center rounded-full bg-accent">
+              <Square class="h-3 w-3 fill-current text-foreground" />
             </div>
             <span>STOP</span>
           </button>
@@ -231,16 +231,16 @@
   </section>
 
   <!-- Filter & Spotlight Status Bar -->
-  <section class="flex h-9 shrink-0 items-center justify-between border-b border-white/10 bg-[#0e1416] px-3 sm:px-4">
+  <section class="flex h-9 shrink-0 items-center justify-between border-b border-border bg-card px-3 sm:px-4">
     <div class="flex items-center gap-2">
-      <div class="flex items-center gap-1 rounded-lg border border-white/10 bg-black/40 p-0.5">
+      <div class="flex items-center gap-1 rounded-lg border border-border bg-muted p-0.5">
         <button
           type="button"
           onclick={() => {
             selectedFilter = "all";
             spotlightId = null;
           }}
-          class="rounded px-2.5 py-1 text-xs font-semibold transition {selectedFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-zinc-400 hover:text-white'}"
+          class="rounded px-2.5 py-1 text-xs font-semibold transition {selectedFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
         >
           Semua (24 Kamera)
         </button>
@@ -252,7 +252,7 @@
               selectedFilter = z;
               spotlightId = null;
             }}
-            class="rounded px-2.5 py-1 text-xs font-semibold transition {selectedFilter === z ? 'bg-primary text-primary-foreground' : 'text-zinc-400 hover:text-white'}"
+            class="rounded px-2.5 py-1 text-xs font-semibold transition {selectedFilter === z ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
           >
             Zona {z} (6 Cam)
           </button>
@@ -264,20 +264,20 @@
           variant="outline"
           size="sm"
           onclick={() => (spotlightId = null)}
-          class="h-7 text-xs border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+          class="h-7 text-xs border-amber-500/40 text-amber-700 hover:bg-amber-500/10"
         >
           Tutup Sorotan (Kembali ke Matrix)
         </Button>
       {/if}
     </div>
 
-    <div class="flex items-center gap-3 text-xs text-zinc-400">
+    <div class="flex items-center gap-3 text-xs text-muted-foreground">
       <span class="flex items-center gap-1.5 font-mono text-[11px]">
         <Video class="h-3.5 w-3.5 text-primary" />
         <span>{filteredStreams.length} Gantangan Dipantau</span>
       </span>
-      <span class="text-zinc-600">|</span>
-      <span class="font-mono text-[11px] text-zinc-500">
+      <span class="text-muted-foreground">|</span>
+      <span class="font-mono text-[11px] text-muted-foreground">
         RTSP / H.265 Hardware Decoding
       </span>
     </div>
@@ -287,16 +287,16 @@
   <main class="min-h-0 flex-1 {selectedFilter === 'all' ? 'overflow-y-auto p-2.5 sm:p-3' : 'overflow-hidden p-2 flex flex-col'}">
     {#if spotlightStream}
       <!-- Single Spotlight High-Res View -->
-      <div class="flex h-full w-full flex-col gap-3 rounded-2xl border border-white/10 bg-black/60 p-4">
+      <div class="flex h-full w-full flex-col gap-3 rounded-2xl border border-border bg-muted p-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="rounded bg-gradient-to-br {spotlightStream.accentColor} px-2.5 py-1 text-sm font-black text-white">
               {spotlightStream.code}
             </span>
-            <span class="text-base font-bold text-white">
+            <span class="text-base font-bold text-foreground">
               {spotlightStream.channelName} • {spotlightStream.category}
             </span>
-            <span class="text-xs text-zinc-400">({spotlightStream.arenaName})</span>
+            <span class="text-xs text-muted-foreground">({spotlightStream.arenaName})</span>
           </div>
           <Button
             variant="outline"
@@ -309,11 +309,11 @@
           </Button>
         </div>
 
-        <div class="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-black">
+        <div class="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-muted">
           {#if engine.connected}
             <NativePlayer zoom={zoomed[spotlightStream.id] ?? 100} id={spotlightStream.id} visible={true} class="h-full w-full" />
           {:else}
-            <div class="flex h-full w-full items-center justify-center text-zinc-400 text-sm">
+            <div class="flex h-full w-full items-center justify-center text-muted-foreground text-sm">
               Menghubungkan ke engine siaran kamera...
             </div>
           {/if}
@@ -330,49 +330,49 @@
       >
         {#each filteredStreams as stream (stream.id)}
           <article
-            class="group relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-[#131a1c] shadow-sm transition hover:border-white/25"
+            class="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition hover:border-border"
           >
             <!-- Card Header -->
-            <header class="flex h-7 shrink-0 items-center justify-between border-b border-white/5 bg-black/40 px-2 py-0.5">
+            <header class="flex h-7 shrink-0 items-center justify-between border-b border-border bg-muted px-2 py-0.5">
               <div class="flex min-w-0 items-center gap-1.5">
                 <span
                   class="flex h-4 items-center justify-center rounded bg-gradient-to-br {stream.accentColor} px-1 font-mono text-[10px] font-black text-white"
                 >
                   {stream.code}
                 </span>
-                <span class="truncate text-[11px] font-semibold text-zinc-200">
+                <span class="truncate text-[11px] font-semibold text-foreground">
                   {stream.category}
                 </span>
               </div>
 
               <div class="flex shrink-0 items-center gap-1">
-                <span class="font-mono text-[8px] text-zinc-400">
+                <span class="font-mono text-[8px] text-muted-foreground">
                   {#if engine.running}
-                    <span class="text-rose-400 font-bold animate-pulse">REC</span>
+                    <span class="text-rose-700 font-bold animate-pulse">REC</span>
                   {:else if engine.connected}
-                    <span class="text-emerald-400 font-bold">LIVE</span>
+                    <span class="text-emerald-700 font-bold">LIVE</span>
                   {:else}
-                    <span class="text-zinc-500">STANDBY</span>
+                    <span class="text-muted-foreground">STANDBY</span>
                   {/if}
                 </span>
 
                 <button
                   type="button"
                   onclick={() => toggleAudio(stream.id)}
-                  class="flex h-5 w-5 items-center justify-center rounded text-zinc-400 hover:text-white"
+                  class="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
                   title={audibleId === stream.id ? "Bisukan suara" : "Nyalakan suara"}
                 >
                   {#if audibleId !== stream.id}
-                    <VolumeX class="h-3 w-3 text-zinc-500" />
+                    <VolumeX class="h-3 w-3 text-muted-foreground" />
                   {:else}
-                    <Volume2 class="h-3 w-3 text-sky-400" />
+                    <Volume2 class="h-3 w-3 text-sky-700" />
                   {/if}
                 </button>
 
                 <button
                   type="button"
                   onclick={() => (spotlightId = stream.id)}
-                  class="flex h-5 w-5 items-center justify-center rounded text-zinc-400 hover:text-white"
+                  class="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
                   title="Perbesar sorotan kamera"
                 >
                   <Maximize2 class="h-3 w-3" />
@@ -381,16 +381,16 @@
             </header>
 
             <!-- Video Aspect Canvas -->
-            <div class="relative aspect-video w-full overflow-hidden bg-black/60">
+            <div class="relative mx-0.5 aspect-video overflow-hidden bg-muted">
               {#if engine.connected && (engine.channels.length === 0 || engine.channels.some((c) => c.id === stream.id))}
                 <NativePlayer zoom={zoomed[stream.id] ?? 100} id={stream.id} visible={true} />
               {:else if engine.connected}
-                <div class="flex h-full w-full items-center justify-center bg-[#090f10] text-zinc-600 text-xs">
+                <div class="flex h-full w-full items-center justify-center bg-muted text-muted-foreground text-xs">
                   <span>Kamera tidak terpasang</span>
                 </div>
               {:else}
                 <div class="flex h-full w-full items-center justify-center bg-gradient-to-br {stream.previewGradient}">
-                  <span class="text-[11px] font-bold text-zinc-400">
+                  <span class="text-[11px] font-bold text-muted-foreground">
                     {stream.code} · {stream.channelName}
                   </span>
                 </div>
@@ -398,7 +398,7 @@
             </div>
 
             <!-- Mini Audio Meter -->
-            <div class="shrink-0 bg-[#0e1416]/90 p-0.5">
+            <div class="shrink-0 bg-card p-0.5">
               {@render cameraZoom(stream.id)}
               <AudioMeter metric={engine.metrics[stream.id]} compact />
             </div>
@@ -414,49 +414,49 @@
       >
         {#each filteredStreams as stream (stream.id)}
           <article
-            class="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#131a1c] shadow-sm transition hover:border-white/25"
+            class="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition hover:border-border"
           >
             <!-- Card Header -->
-            <header class="flex h-7 shrink-0 items-center justify-between border-b border-white/5 bg-black/40 px-2 py-0.5">
+            <header class="flex h-7 shrink-0 items-center justify-between border-b border-border bg-muted px-2 py-0.5">
               <div class="flex min-w-0 items-center gap-1.5">
                 <span
                   class="flex h-4 items-center justify-center rounded bg-gradient-to-br {stream.accentColor} px-1 font-mono text-[10px] font-black text-white"
                 >
                   {stream.code}
                 </span>
-                <span class="truncate text-[11px] font-semibold text-zinc-200">
+                <span class="truncate text-[11px] font-semibold text-foreground">
                   {stream.category}
                 </span>
               </div>
 
               <div class="flex shrink-0 items-center gap-1">
-                <span class="font-mono text-[8px] text-zinc-400">
+                <span class="font-mono text-[8px] text-muted-foreground">
                   {#if engine.running}
-                    <span class="text-rose-400 font-bold animate-pulse">REC</span>
+                    <span class="text-rose-700 font-bold animate-pulse">REC</span>
                   {:else if engine.connected}
-                    <span class="text-emerald-400 font-bold">LIVE</span>
+                    <span class="text-emerald-700 font-bold">LIVE</span>
                   {:else}
-                    <span class="text-zinc-500">STANDBY</span>
+                    <span class="text-muted-foreground">STANDBY</span>
                   {/if}
                 </span>
 
                 <button
                   type="button"
                   onclick={() => toggleAudio(stream.id)}
-                  class="flex h-5 w-5 items-center justify-center rounded text-zinc-400 hover:text-white"
+                  class="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
                   title={audibleId === stream.id ? "Bisukan suara" : "Nyalakan suara"}
                 >
                   {#if audibleId !== stream.id}
-                    <VolumeX class="h-3 w-3 text-zinc-500" />
+                    <VolumeX class="h-3 w-3 text-muted-foreground" />
                   {:else}
-                    <Volume2 class="h-3 w-3 text-sky-400" />
+                    <Volume2 class="h-3 w-3 text-sky-700" />
                   {/if}
                 </button>
 
                 <button
                   type="button"
                   onclick={() => (spotlightId = stream.id)}
-                  class="flex h-5 w-5 items-center justify-center rounded text-zinc-400 hover:text-white"
+                  class="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
                   title="Perbesar sorotan kamera"
                 >
                   <Maximize2 class="h-3 w-3" />
@@ -465,16 +465,16 @@
             </header>
 
             <!-- Video Player Area: Dynamically fills available vertical space -->
-            <div class="relative min-h-0 flex-1 overflow-hidden bg-black/60">
+            <div class="relative mx-0.5 min-h-0 flex-1 overflow-hidden bg-muted">
               {#if engine.connected && (engine.channels.length === 0 || engine.channels.some((c) => c.id === stream.id))}
                 <NativePlayer zoom={zoomed[stream.id] ?? 100} id={stream.id} visible={true} class="h-full w-full" />
               {:else if engine.connected}
-                <div class="flex h-full w-full items-center justify-center bg-[#090f10] text-zinc-600 text-xs">
+                <div class="flex h-full w-full items-center justify-center bg-muted text-muted-foreground text-xs">
                   <span>Kamera tidak terpasang</span>
                 </div>
               {:else}
                 <div class="flex h-full w-full items-center justify-center bg-gradient-to-br {stream.previewGradient}">
-                  <span class="text-[11px] font-bold text-zinc-400">
+                  <span class="text-[11px] font-bold text-muted-foreground">
                     {stream.code} · {stream.channelName}
                   </span>
                 </div>
@@ -482,7 +482,7 @@
             </div>
 
             <!-- Mini Audio Meter -->
-            <div class="shrink-0 bg-[#0e1416]/90 p-0.5">
+            <div class="shrink-0 bg-card p-0.5">
               {@render cameraZoom(stream.id)}
               <AudioMeter metric={engine.metrics[stream.id]} compact />
             </div>
@@ -496,51 +496,51 @@
 <!-- Modal Edit Konfigurasi Lomba & Juri -->
 {#if showEditModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
-    <div class="w-full max-w-md rounded-2xl border border-white/10 bg-[#161e20] p-6 text-zinc-100 shadow-2xl">
-      <div class="flex items-center gap-2 border-b border-white/10 pb-3">
-        <Trophy class="h-5 w-5 text-amber-400" />
-        <h3 class="text-base font-bold text-white">Konfigurasi Lomba & Dewan Juri</h3>
+    <div class="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-foreground shadow-2xl">
+      <div class="flex items-center gap-2 border-b border-border pb-3">
+        <Trophy class="h-5 w-5 text-amber-700" />
+        <h3 class="text-base font-bold text-foreground">Konfigurasi Lomba & Dewan Juri</h3>
       </div>
 
       <div class="mt-4 space-y-3.5">
         <div>
-          <Label class="text-xs text-zinc-400">Nama Event</Label>
-          <Input bind:value={editEventName} placeholder="Piala Umi Kasum" class="mt-1 bg-black/40" />
+          <Label class="text-xs text-muted-foreground">Nama Event</Label>
+          <Input bind:value={editEventName} placeholder="Piala Umi Kasum" class="mt-1 bg-muted" />
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <Label class="text-xs text-zinc-400">Babak / Sesi</Label>
-            <Input bind:value={editSessionName} placeholder="Sesi 1" class="mt-1 bg-black/40" />
+            <Label class="text-xs text-muted-foreground">Babak / Sesi</Label>
+            <Input bind:value={editSessionName} placeholder="Sesi 1" class="mt-1 bg-muted" />
           </div>
           <div>
-            <Label class="text-xs text-zinc-400">Durasi Timer (detik)</Label>
-            <Input type="number" bind:value={editDuration} placeholder="150" class="mt-1 bg-black/40" />
+            <Label class="text-xs text-muted-foreground">Durasi Timer (detik)</Label>
+            <Input type="number" bind:value={editDuration} placeholder="150" class="mt-1 bg-muted" />
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <Label class="text-xs text-zinc-400">Jam Mulai</Label>
-            <Input bind:value={editStartTime} placeholder="10.00" class="mt-1 bg-black/40" />
+            <Label class="text-xs text-muted-foreground">Jam Mulai</Label>
+            <Input bind:value={editStartTime} placeholder="10.00" class="mt-1 bg-muted" />
           </div>
           <div>
-            <Label class="text-xs text-zinc-400">Jam Selesai</Label>
-            <Input bind:value={editEndTime} placeholder="10.10 WIB" class="mt-1 bg-black/40" />
+            <Label class="text-xs text-muted-foreground">Jam Selesai</Label>
+            <Input bind:value={editEndTime} placeholder="10.10 WIB" class="mt-1 bg-muted" />
           </div>
         </div>
 
         <div>
-          <Label class="text-xs text-zinc-400">Dewan Juri (4 Juri)</Label>
+          <Label class="text-xs text-muted-foreground">Dewan Juri (4 Juri)</Label>
           <div class="mt-1.5 space-y-1.5">
             {#each editJurors as _, idx}
-              <Input bind:value={editJurors[idx]} placeholder={`Juri ${idx + 1}`} class="bg-black/40 text-xs" />
+              <Input bind:value={editJurors[idx]} placeholder={`Juri ${idx + 1}`} class="bg-muted text-xs" />
             {/each}
           </div>
         </div>
       </div>
 
-      <div class="mt-6 flex items-center justify-end gap-2 border-t border-white/10 pt-4">
+      <div class="mt-6 flex items-center justify-end gap-2 border-t border-border pt-4">
         <Button variant="ghost" size="sm" onclick={() => (showEditModal = false)}>
           Batal
         </Button>

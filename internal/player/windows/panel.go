@@ -36,18 +36,33 @@ func SetBounds(parent, h uintptr, r model.Rect, visible bool) {
 		show.Call(h, 0)
 		return
 	}
-	d, _, _ := dpi.Call(parent)
-	if d == 0 {
-		d = 96
+	scale := 1.0
+	if !r.DevicePixels {
+		if d, _, _ := dpi.Call(parent); d != 0 {
+			scale = float64(d) / 96
+		}
 	}
-	scale := float64(d) / 96
 	px := func(v int) uintptr { return uintptr(int32(math.Round(float64(v) * scale))) }
-	clip, _, _ := rectRegion.Call(px(r.ClipX), px(r.ClipY), px(r.ClipX+r.ClipWidth), px(r.ClipY+r.ClipHeight))
+	left, top := max(0, r.ClipX), max(0, r.ClipY)
+	right, bottom := min(r.Width, r.ClipX+r.ClipWidth), min(r.Height, r.ClipY+r.ClipHeight)
+	if right <= left || bottom <= top {
+		Hide(h)
+		return
+	}
+	clip, _, _ := rectRegion.Call(px(left), px(top), px(right), px(bottom))
+	if clip == 0 {
+		Hide(h)
+		return
+	}
 	ok, _, _ := region.Call(h, clip, 1)
 	if ok == 0 {
 		deleteObject.Call(clip)
+		Hide(h)
+		return
 	}
-	position.Call(h, 0, px(r.X), px(r.Y), px(r.Width), px(r.Height), 0x0010|0x0040)
+	if ok, _, _ := position.Call(h, 0, px(r.X), px(r.Y), px(r.Width), px(r.Height), 0x0010|0x0040); ok == 0 {
+		Hide(h)
+	}
 }
 func Destroy(h uintptr) { destroy.Call(h) }
 func Hide(h uintptr)    { show.Call(h, 0) }

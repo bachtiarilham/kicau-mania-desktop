@@ -11,6 +11,7 @@
     PanelLeftClose,
     PanelLeftOpen,
   } from "@lucide/svelte";
+  import type { Snippet } from "svelte";
   import { Button } from "$lib/components/ui/button";
   import NativePlayer from "./native-player.svelte";
   import ZoomSlider from "./zoom-slider.svelte";
@@ -25,9 +26,10 @@
   interface Props {
     showZoneBar?: boolean;
     showJuriHud?: boolean;
+    identity?: Snippet<[boolean]>;
   }
 
-  let { showZoneBar = true, showJuriHud = true }: Props = $props();
+  let { showZoneBar = true, showJuriHud = true, identity }: Props = $props();
 
   const STORAGE_KEY = "kicau_active_zone_3x2";
   const ZONES = [
@@ -86,7 +88,7 @@
         isLive: engine.connected || engine.running,
         quality: "1080P60",
         zone: selectedZone,
-        previewGradient: "from-zinc-800 to-zinc-950",
+        previewGradient: "from-emerald-50 to-slate-100",
         accentColor: "from-primary to-primary/80",
       };
 
@@ -118,22 +120,22 @@
   }
 </script>
 
-<div class="flex h-full w-full flex-col overflow-hidden bg-[#0c1011] text-zinc-100 select-none">
+<div class="flex h-full w-full flex-col overflow-hidden bg-background text-foreground select-none">
   <!-- Top Bar: Zone Selector & Control -->
   {#if showZoneBar}
     <div
-      class="flex h-12 shrink-0 items-center justify-between border-b border-white/10 bg-[#12181a] px-3 sm:px-4"
+      class="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-3 sm:px-4"
     >
       <div class="flex items-center gap-2">
         {#if showJuriHud}
           <button
             type="button"
             onclick={() => (hudCollapsed = !hudCollapsed)}
-            class="flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/40 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:bg-white/10 hover:text-white"
+            class="flex items-center gap-1.5 rounded-lg border border-border bg-muted px-2.5 py-1 text-xs font-semibold text-foreground transition hover:bg-accent hover:text-foreground"
             title={hudCollapsed ? "Tampilkan panel info juri" : "Perkecil panel info juri"}
           >
             {#if hudCollapsed}
-              <PanelLeftOpen class="h-3.5 w-3.5 text-amber-400" />
+              <PanelLeftOpen class="h-3.5 w-3.5 text-amber-700" />
               <span class="hidden sm:inline">Info Juri</span>
             {:else}
               <PanelLeftClose class="h-3.5 w-3.5" />
@@ -142,7 +144,7 @@
           </button>
         {/if}
 
-        <div class="flex items-center gap-1 rounded-lg bg-black/40 p-1 border border-white/10">
+        <div class="flex items-center gap-1 rounded-lg bg-muted p-1 border border-border">
           {#each ZONES as z}
             <button
               type="button"
@@ -150,7 +152,7 @@
                 selectedZone = z.id;
                 focusId = null;
               }}
-              class="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition {selectedZone === z.id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}"
+              class="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition {selectedZone === z.id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
             >
               <span>{z.label}</span>
               <span class="text-[10px] opacity-75 font-mono hidden sm:inline">({z.range})</span>
@@ -163,7 +165,7 @@
             variant="outline"
             size="sm"
             onclick={() => (focusId = null)}
-            class="h-7 text-xs border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+            class="h-7 text-xs border-amber-500/40 text-amber-700 hover:bg-amber-500/10"
           >
             Kembali ke Grid 3x2
           </Button>
@@ -172,21 +174,21 @@
 
       <!-- Right: Live Timer Status Badge -->
       <div class="flex items-center gap-2.5">
-        <div class="flex items-center gap-2 rounded-lg border border-white/10 bg-black/50 px-2.5 py-1">
+        <div class="flex items-center gap-2 rounded-lg border border-border bg-muted px-2.5 py-1">
           <span
             class="h-2 w-2 rounded-full {roundStore.state === 'RUNNING' ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}"
           ></span>
-          <span class="font-mono text-xs font-black text-amber-300">
+          <span class="font-mono text-xs font-black text-amber-700">
             {roundStore.remainingSeconds}s
           </span>
-          <span class="text-[10px] text-zinc-400 font-semibold uppercase">
+          <span class="text-[10px] text-muted-foreground font-semibold uppercase">
             {roundStore.sessionName}
           </span>
         </div>
 
-        <div class="hidden items-center gap-2 text-[11px] text-zinc-400 md:flex">
-          <span class="text-zinc-600">|</span>
-          <span class="font-mono text-[10px] text-zinc-500">6 KAMERA 3x2</span>
+        <div class="hidden items-center gap-2 text-[11px] text-muted-foreground md:flex">
+          <span class="text-muted-foreground">|</span>
+          <span class="font-mono text-[10px] text-muted-foreground">6 KAMERA 3x2</span>
         </div>
       </div>
     </div>
@@ -196,6 +198,7 @@
   <div class="flex min-h-0 flex-1 overflow-hidden">
     {#if showJuriHud}
       <JuriRoundHud
+        {identity}
         collapsed={hudCollapsed}
         onToggleCollapse={() => (hudCollapsed = !hudCollapsed)}
       />
@@ -211,11 +214,11 @@
         {#each zoneSlots as slot (slot.channelId)}
           <article
             class:hidden={!!focusId && focusId !== slot.channelId}
-            class="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#141b1d]/90 shadow-md transition-all duration-150 hover:border-white/20"
+            class="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-md transition-all duration-150 hover:border-border"
           >
             <!-- Cell Header: Compact (height ~32px) -->
             <header
-              class="flex h-8 shrink-0 items-center justify-between border-b border-white/5 bg-black/40 px-2.5 py-0.5"
+              class="flex h-8 shrink-0 items-center justify-between border-b border-border bg-muted px-2.5 py-0.5"
             >
               <div class="flex min-w-0 items-center gap-2">
                 <span
@@ -223,65 +226,65 @@
                 >
                   {slot.stream.code}
                 </span>
-                <span class="truncate text-xs font-semibold text-zinc-200">
+                <span class="truncate text-xs font-semibold text-foreground">
                   {slot.stream.category}
                 </span>
-                <span class="hidden text-[10px] text-zinc-400 sm:inline truncate">
+                <span class="hidden text-[10px] text-muted-foreground sm:inline truncate">
                   · {slot.stream.arenaName}
                 </span>
               </div>
 
               <div class="flex shrink-0 items-center gap-1">
-                <span class="font-mono text-[9px] text-zinc-400">
+                <span class="font-mono text-[9px] text-muted-foreground">
                   {#if engine.running}
-                    <span class="inline-flex items-center gap-1 text-rose-400 font-bold">
+                    <span class="inline-flex items-center gap-1 text-rose-700 font-bold">
                       <span class="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse"></span>
                       REC
                     </span>
                   {:else if engine.connected}
-                    <span class="inline-flex items-center gap-1 text-emerald-400">
+                    <span class="inline-flex items-center gap-1 text-emerald-700">
                       <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
                       {engine.playerStatus[slot.channelId]?.fps !== undefined
                         ? `${Number(engine.playerStatus[slot.channelId].fps).toFixed(0)} FPS`
                         : "LIVE"}
                     </span>
                   {:else}
-                    <span class="text-zinc-500">STANDBY</span>
+                    <span class="text-muted-foreground">STANDBY</span>
                   {/if}
                 </span>
 
                 <button
                   type="button"
                   onclick={() => toggleAudio(slot.channelId)}
-                  class="flex h-6 w-6 items-center justify-center rounded text-zinc-300 transition hover:bg-white/15"
+                  class="flex h-6 w-6 items-center justify-center rounded text-foreground transition hover:bg-accent"
                   aria-label={audibleId !== slot.channelId ? "Nyalakan suara" : "Bisukan suara"}
                   title={audibleId !== slot.channelId ? "Nyalakan suara" : "Bisukan"}
                 >
                   {#if audibleId !== slot.channelId}
-                    <VolumeX class="h-3.5 w-3.5 text-zinc-500" />
+                    <VolumeX class="h-3.5 w-3.5 text-muted-foreground" />
                   {:else}
-                    <Volume2 class="h-3.5 w-3.5 text-sky-400" />
+                    <Volume2 class="h-3.5 w-3.5 text-sky-700" />
                   {/if}
                 </button>
 
                 <button
                   type="button"
                   onclick={() => toggleFocus(slot.channelId)}
-                  class="flex h-6 w-6 items-center justify-center rounded text-zinc-300 transition hover:bg-white/15"
+                  class="flex h-6 w-6 items-center justify-center rounded text-foreground transition hover:bg-accent"
                   aria-label={focusId === slot.channelId ? "Kembali ke 3x2" : "Fokus layar penuh"}
                   title={focusId === slot.channelId ? "Kembali ke 3x2" : "Fokus"}
                 >
                   {#if focusId === slot.channelId}
-                    <Minimize2 class="h-3.5 w-3.5 text-amber-400" />
+                    <Minimize2 class="h-3.5 w-3.5 text-amber-700" />
                   {:else}
-                    <Maximize2 class="h-3.5 w-3.5 text-zinc-400 group-hover:text-white" />
+                    <Maximize2 class="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
                   {/if}
                 </button>
               </div>
             </header>
 
             <!-- Video Player Area: Fills remaining height -->
-            <div class="relative min-h-0 flex-1 overflow-hidden bg-black/60">
+            <div class="relative mx-0.5 min-h-0 flex-1 overflow-hidden bg-muted">
               {#if engine.connected}
                 <NativePlayer
                   id={slot.channelId}
@@ -299,19 +302,19 @@
                   ></div>
                   <div
                     class="pointer-events-none absolute inset-0 opacity-15"
-                    style="background-image: linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 24px 24px;"
+                    style="background-image: linear-gradient(rgba(40,75,61,0.24) 1px, transparent 1px), linear-gradient(90deg, rgba(40,75,61,0.24) 1px, transparent 1px); background-size: 24px 24px;"
                   ></div>
 
                   <div class="relative z-10 flex flex-col items-center gap-1.5 text-center">
                     <div
-                      class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br {slot.stream.accentColor} text-sm font-black text-white shadow-md ring-2 ring-white/10"
+                      class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br {slot.stream.accentColor} text-sm font-black text-white shadow-md ring-2 ring-border"
                     >
                       {slot.stream.code}
                     </div>
-                    <span class="text-[11px] font-medium text-zinc-300">
+                    <span class="text-[11px] font-medium text-foreground">
                       {slot.stream.channelName}
                     </span>
-                    <span class="rounded bg-black/50 px-2 py-0.5 text-[9px] font-semibold text-zinc-400 backdrop-blur-xs">
+                    <span class="rounded bg-muted px-2 py-0.5 text-[9px] font-semibold text-muted-foreground backdrop-blur-xs">
                       Mulai sesi untuk stream live
                     </span>
                   </div>
@@ -320,7 +323,7 @@
             </div>
 
             <!-- Bottom: Active Audio Meter with Live Waveform Graph -->
-            <div class="shrink-0 bg-[#0e1416]/95 pt-0.5">
+            <div class="shrink-0 bg-card pt-0.5">
               {#if engine.connected && engine.channels.some((channel) => channel.id === slot.channelId)}
                 <ZoomSlider
                   value={zoomed[slot.channelId] ?? 100}

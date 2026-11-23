@@ -52,6 +52,7 @@ export class Rect {
     "clip_width": number;
     "clip_height": number;
     "visible": boolean;
+    "device_pixels"?: boolean;
 
     /** Creates a new Rect instance. */
     constructor($$source: Partial<Rect> = {}) {

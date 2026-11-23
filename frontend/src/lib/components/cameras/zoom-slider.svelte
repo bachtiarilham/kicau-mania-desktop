@@ -4,7 +4,7 @@
   let { value, onChange }: { value: number; onChange: (value: number) => void } = $props();
 </script>
 
-<label class="mx-2 flex items-center gap-1.5 pb-0.5 text-zinc-300">
+<label class="mx-2 flex items-center gap-1.5 pb-0.5 text-foreground">
   <ZoomIn class="size-3 shrink-0" aria-hidden="true" />
   <input
     type="range"

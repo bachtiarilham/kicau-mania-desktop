@@ -23,24 +23,24 @@
 </script>
 
 <section
-  class="{compact ? 'mx-1.5 mb-1 px-2 py-1 rounded-lg' : 'mx-2 mb-2 px-3 pb-1.5 pt-2 rounded-xl'} border border-border bg-black/35 select-none"
+  class="{compact ? 'mx-1.5 mb-1 px-2 py-1 rounded-lg' : 'mx-2 mb-2 px-3 pb-1.5 pt-2 rounded-xl'} border border-border bg-muted select-none"
   aria-label="Level suara burung"
 >
   <div class="{compact ? 'mb-1' : 'mb-2'} flex min-w-0 items-center justify-between gap-1.5">
     <span class="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
-      <Volume2 size={12} class="text-sky-400" />
+      <Volume2 size={12} class="text-sky-700" />
       <span>Audio Burung</span>
     </span>
     <div class="flex items-center gap-1.5 font-mono">
       <span class="text-[9px] text-muted-foreground">RMS: {rms === null ? "—" : rms.toFixed(1)}</span>
-      <span class="rounded bg-black/50 px-1 text-[10px] font-semibold text-emerald-400">
+      <span class="rounded bg-muted px-1 text-[10px] font-semibold text-emerald-700">
         {peak === null ? "— dBFS" : `${peak.toFixed(1)} dBFS`}
       </span>
     </div>
   </div>
 
   <div
-    class="relative {compact ? 'mb-1 h-1' : 'mb-2 h-1.5'} overflow-hidden rounded-full bg-white/10"
+    class="relative {compact ? 'mb-1 h-1' : 'mb-2 h-1.5'} overflow-hidden rounded-full bg-accent"
     role="img"
     aria-label={peak === null ? "Belum ada metrik audio" : `Level audio ${peak.toFixed(1)} dBFS`}
   >
@@ -51,7 +51,7 @@
     <span class="absolute inset-y-0 w-0.5 bg-amber-400/70" style:left={`${level(reference) * 100}%`}></span>
   </div>
 
-  <div class="relative overflow-hidden rounded border border-white/5 bg-black/30">
+  <div class="relative overflow-hidden rounded border border-border bg-muted">
     <svg
       viewBox="0 0 520 46"
       preserveAspectRatio="none"
@@ -61,8 +61,8 @@
     >
       <defs>
         <linearGradient id={gradientID} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.5" />
-          <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.08" />
+          <stop offset="0%" stop-color="#0369a1" stop-opacity="0.5" />
+          <stop offset="100%" stop-color="#0369a1" stop-opacity="0.08" />
         </linearGradient>
       </defs>
       {#if area}<polygon points={area} fill={`url(#${gradientID})`} />{/if}
@@ -71,7 +71,7 @@
         x2="520"
         y1={43 - level(reference) * 38}
         y2={43 - level(reference) * 38}
-        stroke="#b58125"
+        stroke="#92400e"
         stroke-opacity="0.55"
         stroke-dasharray="6 6"
         vector-effect="non-scaling-stroke"
@@ -79,13 +79,13 @@
       <polyline
         {points}
         fill="none"
-        stroke="#38bdf8"
+        stroke="#0369a1"
         stroke-width="1.25"
         stroke-linejoin="round"
         vector-effect="non-scaling-stroke"
       />
     </svg>
-    <span class="absolute right-1 top-0.5 font-mono text-[7px] text-amber-500/80" title="Garis acuan visual; tidak mengubah pengaturan deteksi engine">−35 dB</span>
+    <span class="absolute right-1 top-0.5 font-mono text-[7px] text-amber-700/80" title="Garis acuan visual; tidak mengubah pengaturan deteksi engine">−35 dB</span>
     <span class="absolute bottom-0.5 left-1 font-mono text-[7px] text-muted-foreground">−65 ◂ Now</span>
     {#if peak === null}
       <span class="absolute inset-0 grid place-content-center text-[9px] text-muted-foreground">

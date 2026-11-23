@@ -10,14 +10,14 @@
   --color-popover: var(--card);
   --color-popover-foreground: var(--foreground);
   --color-primary: var(--primary);
-  --color-primary-foreground: #12160d;
-  --color-secondary: #23302b;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #e6efeb;
   --color-secondary-foreground: var(--foreground);
-  --color-muted: #1b2425;
-  --color-muted-foreground: #8a9a9a;
-  --color-accent: #25302e;
+  --color-muted: #f0f4f2;
+  --color-muted-foreground: #52635e;
+  --color-accent: #e4f1eb;
   --color-accent-foreground: var(--foreground);
-  --color-destructive: #fb7185;
+  --color-destructive: #b91c38;
   --color-border: var(--border);
   --color-input: var(--border);
   --color-ring: var(--primary);
@@ -28,14 +28,14 @@
 }
 :root {
   font-family: "Inter Variable", sans-serif;
-  --background: #101718;
-  --foreground: #e9efec;
-  --card: #172122;
-  --primary: #d4ed95;
-  --border: #2b3838;
+  --background: #f4f7f6;
+  --foreground: #14251f;
+  --card: #ffffff;
+  --primary: #17634d;
+  --border: #d9e4df;
   color: var(--foreground);
   background: var(--background);
-  color-scheme: dark;
+  color-scheme: light;
 }
 * {
   box-sizing: border-box;
@@ -61,7 +61,7 @@ textarea {
   max-width: 100%;
 }
 select {
-  background: #172122;
+  background: var(--card);
   border: 1px solid var(--border);
   padding: 9px 12px;
   border-radius: 8px;
@@ -89,7 +89,7 @@ h2 {
   font-weight: 600;
 }
 .subtitle {
-  color: #8a9a9a;
+  color: #52635e;
   font-size: 13px;
   margin-top: 6px;
 }
@@ -104,7 +104,7 @@ h2 {
   min-width: 0;
   gap: 7px;
   font-size: 12px;
-  color: #afbfba;
+  color: #3c5047;
 }
 .field > input,
 .field > select,
@@ -127,30 +127,30 @@ fieldset {
   border-radius: 14px;
   padding: 60px 24px;
   text-align: center;
-  color: #8a9a9a;
+  color: #52635e;
 }
 .chip {
   font-size: 11px;
   letter-spacing: 0.04em;
-  border: 1px solid #364440;
+  border: 1px solid #d9e4df;
   border-radius: 6px;
   padding: 4px 7px;
-  color: #afc0b4;
+  color: #3e584c;
 }
 .error {
   padding: 12px 16px;
-  border: 1px solid #7b3a46;
-  background: #381e26;
+  border: 1px solid #efc5cd;
+  background: #fff1f3;
   border-radius: 10px;
-  color: #fda4af;
+  color: #9f1734;
   font-size: 13px;
 }
 .notice {
   padding: 12px 16px;
-  border: 1px solid #48563a;
-  background: #263221;
+  border: 1px solid #bedccd;
+  background: #edf8f2;
   border-radius: 10px;
-  color: #d4ed95;
+  color: #17634d;
   font-size: 13px;
 }
 table {
@@ -164,7 +164,7 @@ td {
   border-bottom: 1px solid var(--border);
 }
 th {
-  color: #8a9a9a;
+  color: #52635e;
   font-weight: 500;
 }
 progress {

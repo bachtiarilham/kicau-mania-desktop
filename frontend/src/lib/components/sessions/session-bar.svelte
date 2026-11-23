@@ -124,7 +124,7 @@
 </script>
 
 <div
-  class="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-[#182120] px-6 py-3"
+  class="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card px-6 py-3"
 >
   <!-- Sisi Kiri: Status Operasional & Monitoring -->
   <div class="flex items-center gap-4">
@@ -143,14 +143,14 @@
       <Circle
         size={10}
         class={engine.running
-          ? "fill-red-500 text-red-500 animate-pulse"
+          ? "fill-red-500 text-red-700 animate-pulse"
           : "text-muted-foreground"}
       />
       <div class="text-xs font-semibold tracking-wide">
         {engine.running ? "MEREKAM" : engine.session?.state || "STANDBY"}
       </div>
       {#if engine.running || elapsed > 0}
-        <span class="font-mono text-xs font-bold text-foreground bg-black/40 px-2 py-0.5 rounded border border-border">
+        <span class="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded border border-border">
           {formattedElapsed}
         </span>
       {/if}
@@ -177,11 +177,11 @@
     <div class="flex items-center gap-1.5 text-[11px]">
       <Cloud size={13} class="text-muted-foreground" />
       {#if engine.running}
-        <span class="flex items-center gap-1 text-amber-400 font-medium bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/50">
+        <span class="flex items-center gap-1 text-amber-700 font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
           <Pause size={10} /> Upload Paused (Lomba Aktif)
         </span>
       {:else}
-        <span class="flex items-center gap-1 text-emerald-400 font-medium bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/50">
+        <span class="flex items-center gap-1 text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
           <CheckCircle2 size={10} /> Upload Siap (Jeda Sesi)
         </span>
       {/if}
@@ -230,7 +230,7 @@
 
 <!-- Quick Save Dialog (Muncul setelah klik STOP) -->
 <Dialog.Root bind:open={confirm}>
-  <Dialog.Content class="max-w-md bg-[#16201e] border-border text-foreground">
+  <Dialog.Content class="max-w-md bg-card border-border text-foreground">
     <Dialog.Header>
       <Dialog.Title class="text-base font-bold flex items-center gap-2">
         <HardDrive size={18} class="text-primary" />
@@ -249,7 +249,7 @@
           id="session-name"
           bind:value={sessionName}
           placeholder="Contoh: Murai Batu A - Tiket 500k"
-          class="bg-[#101716] border-border text-sm"
+          class="bg-card border-border text-sm"
         />
         <p class="text-[10px] text-muted-foreground">
           Bisa diubah sesuai kelas burung, atau biarkan default berformat tanggal & jam.
@@ -295,7 +295,7 @@
           <Input
             bind:value={storageDir}
             placeholder="D:\KicauRecordings"
-            class="bg-[#101716] border-border text-xs font-mono"
+            class="bg-card border-border text-xs font-mono"
           />
           <Button
             type="button"

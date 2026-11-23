@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api, message } from "$lib/services/api";
   import { engine } from "$lib/state/engine.svelte";
+  import { playerGeometry } from "./player-geometry";
   let {
     id,
     recording = false,
@@ -28,28 +29,7 @@
       pending = true;
       return;
     }
-    const r = element.getBoundingClientRect();
-    const scrollParent =
-      element.closest(".overflow-y-auto") ||
-      document.querySelector("[data-viewport]");
-    const viewport =
-      scrollParent?.getBoundingClientRect() ||
-      new DOMRect(0, 0, innerWidth, innerHeight);
-    const left = Math.max(0, r.left, viewport.left),
-      top = Math.max(0, r.top, viewport.top),
-      right = Math.min(innerWidth, r.right, viewport.right),
-      bottom = Math.min(innerHeight, r.bottom, viewport.bottom);
-    const rect = {
-      x: Math.round(r.left),
-      y: Math.round(r.top),
-      width: Math.round(r.width),
-      height: Math.round(r.height),
-      clip_x: Math.max(0, Math.round(left - r.left)),
-      clip_y: Math.max(0, Math.round(top - r.top)),
-      clip_width: Math.max(0, Math.round(right - left)),
-      clip_height: Math.max(0, Math.round(bottom - top)),
-      visible: visible && !engine.overlay && right > left && bottom > top,
-    };
+    const rect = playerGeometry(element, visible && !engine.overlay);
     busy = true;
     (recording ? api.playRecording(id, rect) : api.player(id, rect, zoom))
       .then(() => (error = ""))
@@ -96,7 +76,7 @@
 
 <div
   bind:this={element}
-  class="relative min-h-0 bg-[#090f10] text-center {className || 'aspect-video w-full'}"
+  class="relative min-h-0 bg-muted text-center {className || 'aspect-video w-full'}"
 >
   <div
     class="absolute inset-0 grid place-content-center gap-2 p-4 text-xs text-muted-foreground"
@@ -106,7 +86,7 @@
         engine.playerStatus[id]?.message ||
         engine.playerStatus[id]?.state ||
         "Menghubungkan RTSP…"}</span
-    ><span class="font-mono text-[9px] text-[#51635d]"
+    ><span class="font-mono text-[9px] text-muted-foreground"
       >NATIVE PLAYER · RTSP/TCP</span
     >
   </div>

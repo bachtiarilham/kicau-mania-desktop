@@ -18,8 +18,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     tags: ["Murai Batu", "Zona A", "Ronde 01"],
     description:
       "Siaran langsung Gantangan 01 di Zona A. Penjurian sesi penyisihan kelas Murai Batu Umum.",
-    accentColor: "from-violet-500 to-fuchsia-600",
-    previewGradient: "from-amber-950 via-stone-900 to-zinc-950",
+    accentColor: "from-violet-700 to-fuchsia-700",
+    previewGradient: "from-amber-50 via-stone-50 to-zinc-50",
   },
   {
     id: "gantangan02",
@@ -37,8 +37,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     tags: ["Murai Batu", "Zona A", "HD"],
     description:
       "Pantauan langsung Gantangan 02 Zona A dari sudut depan sangkar untuk penilaian durasi dan materi lagu.",
-    accentColor: "from-emerald-500 to-teal-600",
-    previewGradient: "from-emerald-950 via-zinc-900 to-slate-950",
+    accentColor: "from-emerald-700 to-teal-700",
+    previewGradient: "from-emerald-50 via-zinc-50 to-slate-50",
   },
   {
     id: "gantangan03",
@@ -56,8 +56,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     tags: ["Cucak Ijo", "Zona A", "Ronde 02"],
     description:
       "Live stream Gantangan 03 Zona A kelas Cucak Ijo Losgan A dengan audio jernih dari mikrofon gantangan.",
-    accentColor: "from-lime-500 to-emerald-600",
-    previewGradient: "from-teal-950 via-neutral-900 to-zinc-950",
+    accentColor: "from-lime-700 to-emerald-700",
+    previewGradient: "from-teal-50 via-neutral-50 to-zinc-50",
   },
   {
     id: "gantangan04",
@@ -75,8 +75,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     tags: ["Kacer", "Zona A", "HD"],
     description:
       "Penilaian gaya tarung, buka ekor, dan volume kicauan Kacer di Gantangan 04 Zona A secara realtime.",
-    accentColor: "from-blue-500 to-cyan-600",
-    previewGradient: "from-sky-950 via-stone-900 to-zinc-950",
+    accentColor: "from-blue-700 to-cyan-700",
+    previewGradient: "from-sky-50 via-stone-50 to-zinc-50",
   },
   {
     id: "gantangan05",
@@ -94,8 +94,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     tags: ["Kenari", "Zona A", "Ronde 03"],
     description:
       "Pemantauan irama cengkok dan lagu Kenari di nomor 05 Zona A dengan resolusi tinggi tanpa jeda.",
-    accentColor: "from-amber-500 to-orange-600",
-    previewGradient: "from-orange-950 via-zinc-900 to-neutral-950",
+    accentColor: "from-amber-700 to-orange-700",
+    previewGradient: "from-orange-50 via-zinc-50 to-neutral-50",
   },
   {
     id: "gantangan06",
@@ -113,8 +113,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     tags: ["Lovebird", "Fighter", "Zona A"],
     description:
       "Durasi ngekek panjang Lovebird Fighter nomor 06 dihitung akurat lewat kamera sudut dekat.",
-    accentColor: "from-pink-500 to-rose-600",
-    previewGradient: "from-pink-950 via-neutral-900 to-zinc-950",
+    accentColor: "from-pink-700 to-rose-700",
+    previewGradient: "from-pink-50 via-neutral-50 to-zinc-50",
   },
 
   // --- ZONA B ---
@@ -134,8 +134,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     tags: ["Cendet", "Zona B", "Arena Timur"],
     description:
       "Pantauan Gantangan 07 Arena Timur kelas Cendet Reguler B secara langsung.",
-    accentColor: "from-sky-500 to-blue-600",
-    previewGradient: "from-blue-950 via-slate-900 to-zinc-950",
+    accentColor: "from-sky-700 to-blue-700",
+    previewGradient: "from-blue-50 via-slate-50 to-zinc-50",
   },
   {
     id: "gantangan08",
@@ -153,8 +153,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     tags: ["Anis Merah", "Teler", "Zona B"],
     description:
       "Gaya teler klasik dan variasi lagu Anis Merah nomor 08 disiarkan langsung sudut mata burung.",
-    accentColor: "from-red-500 to-orange-600",
-    previewGradient: "from-red-950 via-zinc-900 to-stone-950",
+    accentColor: "from-red-700 to-orange-700",
+    previewGradient: "from-red-50 via-zinc-50 to-stone-50",
   },
   {
     id: "gantangan09",
@@ -172,8 +172,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     tags: ["Murai Batu", "Zona B", "HD"],
     description:
       "Tembakan tajam dan durasi kerja Murai Batu Ekor Hitam di Gantangan 09 terpantau jelas.",
-    accentColor: "from-purple-500 to-indigo-600",
-    previewGradient: "from-purple-950 via-neutral-900 to-zinc-950",
+    accentColor: "from-purple-700 to-indigo-700",
+    previewGradient: "from-purple-50 via-neutral-50 to-zinc-50",
   },
   {
     id: "gantangan10",
@@ -191,8 +191,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     tags: ["Branjangan", "Zona B", "Ronde 04"],
     description:
       "Hovering khas dan variasi suara Branjangan nomor 10 disorot langsung dari atas pangkringan.",
-    accentColor: "from-yellow-500 to-amber-600",
-    previewGradient: "from-yellow-950 via-stone-900 to-zinc-950",
+    accentColor: "from-yellow-700 to-amber-700",
+    previewGradient: "from-yellow-50 via-stone-50 to-zinc-50",
   },
   {
     id: "gantangan11",
@@ -209,8 +209,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Cucak Jenggot", "Zona B"],
     description: "Irama besetan tajam dan volume kristal Cucak Jenggot nomor 11.",
-    accentColor: "from-teal-500 to-cyan-600",
-    previewGradient: "from-teal-950 via-zinc-900 to-slate-950",
+    accentColor: "from-teal-700 to-cyan-700",
+    previewGradient: "from-teal-50 via-zinc-50 to-slate-50",
   },
   {
     id: "gantangan12",
@@ -227,8 +227,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Kacer", "Zona B"],
     description: "Tarung ngobra penuh materi suara rol tembak di nomor 12.",
-    accentColor: "from-zinc-500 to-stone-600",
-    previewGradient: "from-stone-950 via-neutral-900 to-zinc-950",
+    accentColor: "from-zinc-700 to-stone-700",
+    previewGradient: "from-stone-50 via-neutral-50 to-zinc-50",
   },
 
   // --- ZONA C ---
@@ -247,8 +247,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Murai Batu", "Zona C", "Ring"],
     description: "Aksi adu kualitas mental dan materi lagu mewah burung Ring Nasional.",
-    accentColor: "from-indigo-500 to-violet-600",
-    previewGradient: "from-indigo-950 via-slate-900 to-zinc-950",
+    accentColor: "from-indigo-700 to-violet-700",
+    previewGradient: "from-indigo-50 via-slate-50 to-zinc-50",
   },
   {
     id: "gantangan14",
@@ -265,8 +265,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Kenari", "Zona C"],
     description: "Postur jingkring dan ketukan cengkok rapat di Gantangan 14.",
-    accentColor: "from-amber-400 to-yellow-600",
-    previewGradient: "from-amber-950 via-stone-900 to-zinc-950",
+    accentColor: "from-amber-700 to-yellow-700",
+    previewGradient: "from-amber-50 via-stone-50 to-zinc-50",
   },
   {
     id: "gantangan15",
@@ -283,8 +283,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Cucak Ijo", "Zona C"],
     description: "Entakan jambul dan ngentrok maksimal terlihat presisi di sudut kamera depan.",
-    accentColor: "from-emerald-400 to-green-600",
-    previewGradient: "from-emerald-950 via-neutral-900 to-slate-950",
+    accentColor: "from-emerald-700 to-green-700",
+    previewGradient: "from-emerald-50 via-neutral-50 to-slate-50",
   },
   {
     id: "gantangan16",
@@ -301,8 +301,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Pleci", "Zona C"],
     description: "Gaya buka paruh ngerol nembak kacamata putih di nomor 16.",
-    accentColor: "from-lime-400 to-teal-600",
-    previewGradient: "from-green-950 via-zinc-900 to-stone-950",
+    accentColor: "from-lime-700 to-teal-700",
+    previewGradient: "from-green-50 via-zinc-50 to-stone-50",
   },
   {
     id: "gantangan17",
@@ -319,8 +319,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Murai Batu", "Borneo", "Zona C"],
     description: "Ciri khas dada menggelembung dan stamina tempur tinggi di Zona C.",
-    accentColor: "from-cyan-500 to-blue-600",
-    previewGradient: "from-cyan-950 via-slate-900 to-zinc-950",
+    accentColor: "from-cyan-700 to-blue-700",
+    previewGradient: "from-cyan-50 via-slate-50 to-zinc-50",
   },
   {
     id: "gantangan18",
@@ -337,8 +337,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Anis Kembang", "Zona C"],
     description: "Lagu roll sambung-menyambung tanpa jeda burung Anis Kembang nomor 18.",
-    accentColor: "from-rose-500 to-red-600",
-    previewGradient: "from-rose-950 via-neutral-900 to-zinc-950",
+    accentColor: "from-rose-700 to-red-700",
+    previewGradient: "from-rose-50 via-neutral-50 to-zinc-50",
   },
 
   // --- ZONA D ---
@@ -357,8 +357,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Murai Batu", "Zona D"],
     description: "Gantangan 19 Zona D dengan variasi tembakan cililin dan kenarian tajam.",
-    accentColor: "from-fuchsia-500 to-purple-600",
-    previewGradient: "from-fuchsia-950 via-zinc-900 to-slate-950",
+    accentColor: "from-fuchsia-700 to-purple-700",
+    previewGradient: "from-fuchsia-50 via-zinc-50 to-slate-50",
   },
   {
     id: "gantangan20",
@@ -375,8 +375,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Kacer", "Zona D"],
     description: "Aksi buka sayap dan ekor stabil sepanjang sesi penjurian.",
-    accentColor: "from-slate-400 to-zinc-600",
-    previewGradient: "from-slate-950 via-stone-900 to-zinc-950",
+    accentColor: "from-slate-700 to-zinc-700",
+    previewGradient: "from-slate-50 via-stone-50 to-zinc-50",
   },
   {
     id: "gantangan21",
@@ -393,8 +393,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Cucak Rawa", "Zona D"],
     description: "Volume menggelegar dan suara khas Cucak Rawa nomor 21 terpantau jernih.",
-    accentColor: "from-teal-400 to-emerald-600",
-    previewGradient: "from-teal-950 via-neutral-900 to-zinc-950",
+    accentColor: "from-teal-700 to-emerald-700",
+    previewGradient: "from-teal-50 via-neutral-50 to-zinc-50",
   },
   {
     id: "gantangan22",
@@ -411,8 +411,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Cendet", "Zona D"],
     description: "Karakter nembak greja tarung dan kuntilanak tajam di nomor 22.",
-    accentColor: "from-orange-500 to-amber-600",
-    previewGradient: "from-orange-950 via-stone-900 to-zinc-950",
+    accentColor: "from-orange-700 to-amber-700",
+    previewGradient: "from-orange-50 via-stone-50 to-zinc-50",
   },
   {
     id: "gantangan23",
@@ -429,8 +429,8 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Kenari", "Yorkshire", "Zona D"],
     description: "Postur tegap melengkung dan jeda ketukan rapi Kenari YS nomor 23.",
-    accentColor: "from-yellow-400 to-orange-500",
-    previewGradient: "from-yellow-950 via-zinc-900 to-neutral-950",
+    accentColor: "from-yellow-700 to-orange-700",
+    previewGradient: "from-yellow-50 via-zinc-50 to-neutral-50",
   },
   {
     id: "gantangan24",
@@ -447,7 +447,7 @@ export const MOCK_GANTANGAN_STREAMS: GantanganStream[] = [
     quality: "720P60",
     tags: ["Murai Batu", "Zona D", "VIP"],
     description: "Penampilan kelas VIP penutup sesi di Gantangan 24 Zona D.",
-    accentColor: "from-purple-600 to-pink-600",
-    previewGradient: "from-purple-950 via-slate-900 to-zinc-950",
+    accentColor: "from-purple-700 to-pink-700",
+    previewGradient: "from-purple-50 via-slate-50 to-zinc-50",
   },
 ];
