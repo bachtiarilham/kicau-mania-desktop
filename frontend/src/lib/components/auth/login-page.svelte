@@ -188,7 +188,7 @@
             Administrator
           </h2>
           <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Akses lengkap: <strong class="text-foreground">Operator + Rekaman lokal</strong>, antrean upload, rekaman cloud, & konfigurasi NVR.
+            Akses lengkap: <strong class="text-foreground">Operator + Rekaman & Arsip</strong>, & konfigurasi sistem NVR.
           </p>
         </div>
 

@@ -37,7 +37,7 @@
   $effect(() => {
     if (auth.role === "juri") {
       tab = "cameras";
-    } else if (auth.role === "operator" && !["operator", "cameras", "recordings", "uploads"].includes(tab)) {
+    } else if (auth.role === "operator" && !["operator", "cameras", "recordings"].includes(tab)) {
       tab = "operator";
     }
   });
@@ -45,9 +45,7 @@
   const allNav = [
     { id: "operator", label: "Operator Arena (Live 24)", icon: LayoutDashboard, roles: ["operator", "admin"] },
     { id: "cameras", label: "Monitor Juri (Grid 3x2)", icon: Cctv, roles: ["juri", "operator", "admin"] },
-    { id: "recordings", label: "Rekaman lokal", icon: HardDrive, roles: ["operator", "admin"] },
-    { id: "uploads", label: "Antrean upload", icon: Upload, roles: ["operator", "admin"] },
-    { id: "archive", label: "Rekaman cloud", icon: CloudDownload, roles: ["admin"] },
+    { id: "recordings", label: "Rekaman & Arsip", icon: HardDrive, roles: ["operator", "admin"] },
     { id: "settings", label: "Pengaturan desktop", icon: Settings, roles: ["admin"] },
   ];
 

@@ -253,7 +253,7 @@ func (d *Desktop) PlayRecording(id string, r model.Rect) error {
 	}
 	return d.players.Sync("recording-"+id, d.config.LocalURL+"/api/v1/recordings/"+id+"/file", "X-Local-Control: "+d.engine.Nonce(), r)
 }
-func (d *Desktop) ExportRecording(id string) (string, error) {
+func (d *Desktop) ExportRecording(id string, suggestedFilename string) (string, error) {
 	if !player.ValidID(id) {
 		return "", errors.New("ID rekaman tidak valid")
 	}
@@ -264,7 +264,14 @@ func (d *Desktop) ExportRecording(id string) (string, error) {
 	defer res.Body.Close()
 	ext, label := ".mkv", "Video MKV"
 	d.HidePlayers()
-	dlg := d.app.Dialog.SaveFile().SetFilename(id+ext).AddFilter(label, "*"+ext).AttachToWindow(d.window)
+	filename := id + ext
+	if suggestedFilename != "" {
+		filename = suggestedFilename
+		if !strings.HasSuffix(strings.ToLower(filename), ext) {
+			filename += ext
+		}
+	}
+	dlg := d.app.Dialog.SaveFile().SetFilename(filename).AddFilter(label, "*"+ext).AttachToWindow(d.window)
 	d.mu.Lock()
 	if d.config.RecordingsDir != "" {
 		dlg.SetDirectory(d.config.RecordingsDir)

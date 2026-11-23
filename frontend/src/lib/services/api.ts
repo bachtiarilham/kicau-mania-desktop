@@ -27,7 +27,7 @@ export const api = {
   hidePlayers: () => call("HidePlayers"),
   mute: (id: string, muted: boolean) => call("Mute", id, muted),
   playRecording: (id: string, rect: Row) => call("PlayRecording", id, rect),
-  export: (id: string) => call<string>("ExportRecording", id),
+  export: (id: string, filename = "") => call<string>("ExportRecording", id, filename),
   selectFolder: () => call<string>("SelectRecordingsFolder"),
   openFolder: () => call("OpenRecordingsFolder"),
   saveSession: (sessionID: string, sessionName: string, targetDir: string, format: string) =>
