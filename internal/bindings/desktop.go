@@ -34,8 +34,8 @@ type Desktop struct {
 	window  *application.WebviewWindow
 	ctx     context.Context
 
-	sessionMu       sync.Mutex
-	cachedSession   struct {
+	sessionMu     sync.Mutex
+	cachedSession struct {
 		State    string   `json:"state"`
 		Channels []string `json:"channels"`
 	}
@@ -199,6 +199,15 @@ func (d *Desktop) BindSession(in map[string]any) (any, error) {
 }
 func (d *Desktop) NewSessionID() string { return cloud.ID() }
 func (d *Desktop) SyncPlayer(id string, r model.Rect) error {
+	return d.SyncPlayerWithZoom(id, r, 100)
+}
+func (d *Desktop) SyncZoomPlayer(id string, r model.Rect) error {
+	return d.SyncPlayerWithZoom(id, r, 200)
+}
+func (d *Desktop) SyncPlayerWithZoom(id string, r model.Rect, zoom int) error {
+	if zoom < 100 || zoom > 300 {
+		return errors.New("Zoom harus antara 100% dan 300%")
+	}
 	if !player.ValidID(id) {
 		return errors.New("ID kamera tidak valid")
 	}
@@ -232,7 +241,8 @@ func (d *Desktop) SyncPlayer(id string, r model.Rect) error {
 		}
 	}
 
-	return d.players.Sync(id, strings.TrimRight(d.config.RTSPBase, "/")+"/"+id, "", r)
+	source := strings.TrimRight(d.config.RTSPBase, "/") + "/" + id
+	return d.players.SyncWithZoom(id, source, "", r, zoom)
 }
 func (d *Desktop) StopPlayer(id string)             { d.players.Stop(id) }
 func (d *Desktop) HidePlayers()                     { d.players.Hide() }

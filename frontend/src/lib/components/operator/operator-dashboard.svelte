@@ -21,6 +21,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import NativePlayer from "../cameras/native-player.svelte";
+  import ZoomSlider from "../cameras/zoom-slider.svelte";
   import AudioMeter from "../metrics/audio-meter.svelte";
   import { roundStore } from "$lib/state/round.svelte";
   import { engine } from "$lib/state/engine.svelte";
@@ -31,7 +32,8 @@
   let selectedFilter = $state<"all" | "A" | "B" | "C" | "D">("all");
   let spotlightId = $state<string | null>(null);
   let showEditModal = $state(false);
-  let audioMuted = $state<Record<string, boolean>>({});
+  let audibleId = $state<string | null>(null);
+  let zoomed = $state<Record<string, number>>({});
 
   // Local config form state
   let editEventName = $state(roundStore.eventName);
@@ -91,15 +93,21 @@
   );
 
   async function toggleAudio(id: string) {
-    const nextMuted = !audioMuted[id];
-    audioMuted[id] = nextMuted;
+    const nextMuted = audibleId === id;
     try {
       await api.mute(id, nextMuted);
+      audibleId = nextMuted ? null : id;
     } catch {
       // Ignore audio mute error
     }
   }
 </script>
+
+{#snippet cameraZoom(id: string)}
+  {#if engine.connected && engine.channels.some((channel) => channel.id === id)}
+    <ZoomSlider value={zoomed[id] ?? 100} onChange={(value) => (zoomed[id] = value)} />
+  {/if}
+{/snippet}
 
 <div class="flex h-full w-full flex-col overflow-hidden bg-[#0c1011] text-zinc-100 select-none">
   <!-- Top Section: Modern Tactical Match Control Panel (Upgraded Image 2) -->
@@ -303,7 +311,7 @@
 
         <div class="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-black">
           {#if engine.connected}
-            <NativePlayer id={spotlightStream.id} visible={true} class="h-full w-full" />
+            <NativePlayer zoom={zoomed[spotlightStream.id] ?? 100} id={spotlightStream.id} visible={true} class="h-full w-full" />
           {:else}
             <div class="flex h-full w-full items-center justify-center text-zinc-400 text-sm">
               Menghubungkan ke engine siaran kamera...
@@ -311,6 +319,7 @@
           {/if}
         </div>
 
+        {@render cameraZoom(spotlightStream.id)}
         <AudioMeter metric={engine.metrics[spotlightStream.id]} />
       </div>
     {:else if selectedFilter === "all"}
@@ -351,9 +360,9 @@
                   type="button"
                   onclick={() => toggleAudio(stream.id)}
                   class="flex h-5 w-5 items-center justify-center rounded text-zinc-400 hover:text-white"
-                  title="Audio"
+                  title={audibleId === stream.id ? "Bisukan suara" : "Nyalakan suara"}
                 >
-                  {#if audioMuted[stream.id]}
+                  {#if audibleId !== stream.id}
                     <VolumeX class="h-3 w-3 text-zinc-500" />
                   {:else}
                     <Volume2 class="h-3 w-3 text-sky-400" />
@@ -374,7 +383,7 @@
             <!-- Video Aspect Canvas -->
             <div class="relative aspect-video w-full overflow-hidden bg-black/60">
               {#if engine.connected && (engine.channels.length === 0 || engine.channels.some((c) => c.id === stream.id))}
-                <NativePlayer id={stream.id} visible={true} />
+                <NativePlayer zoom={zoomed[stream.id] ?? 100} id={stream.id} visible={true} />
               {:else if engine.connected}
                 <div class="flex h-full w-full items-center justify-center bg-[#090f10] text-zinc-600 text-xs">
                   <span>Kamera tidak terpasang</span>
@@ -390,6 +399,7 @@
 
             <!-- Mini Audio Meter -->
             <div class="shrink-0 bg-[#0e1416]/90 p-0.5">
+              {@render cameraZoom(stream.id)}
               <AudioMeter metric={engine.metrics[stream.id]} compact />
             </div>
           </article>
@@ -434,9 +444,9 @@
                   type="button"
                   onclick={() => toggleAudio(stream.id)}
                   class="flex h-5 w-5 items-center justify-center rounded text-zinc-400 hover:text-white"
-                  title="Audio"
+                  title={audibleId === stream.id ? "Bisukan suara" : "Nyalakan suara"}
                 >
-                  {#if audioMuted[stream.id]}
+                  {#if audibleId !== stream.id}
                     <VolumeX class="h-3 w-3 text-zinc-500" />
                   {:else}
                     <Volume2 class="h-3 w-3 text-sky-400" />
@@ -457,7 +467,7 @@
             <!-- Video Player Area: Dynamically fills available vertical space -->
             <div class="relative min-h-0 flex-1 overflow-hidden bg-black/60">
               {#if engine.connected && (engine.channels.length === 0 || engine.channels.some((c) => c.id === stream.id))}
-                <NativePlayer id={stream.id} visible={true} class="h-full w-full" />
+                <NativePlayer zoom={zoomed[stream.id] ?? 100} id={stream.id} visible={true} class="h-full w-full" />
               {:else if engine.connected}
                 <div class="flex h-full w-full items-center justify-center bg-[#090f10] text-zinc-600 text-xs">
                   <span>Kamera tidak terpasang</span>
@@ -473,6 +483,7 @@
 
             <!-- Mini Audio Meter -->
             <div class="shrink-0 bg-[#0e1416]/90 p-0.5">
+              {@render cameraZoom(stream.id)}
               <AudioMeter metric={engine.metrics[stream.id]} compact />
             </div>
           </article>

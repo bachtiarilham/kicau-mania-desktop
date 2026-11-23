@@ -89,7 +89,7 @@
     <span class="absolute bottom-0.5 left-1 font-mono text-[7px] text-muted-foreground">−65 ◂ Now</span>
     {#if peak === null}
       <span class="absolute inset-0 grid place-content-center text-[9px] text-muted-foreground">
-        Belum ada sinyal audio
+        Menunggu audio kamera
       </span>
     {/if}
   </div>

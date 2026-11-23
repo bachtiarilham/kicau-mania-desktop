@@ -5,11 +5,13 @@
   let {
     id,
     recording = false,
+    zoom = 100,
     visible = true,
     class: className = "",
   }: {
     id: string;
     recording?: boolean;
+    zoom?: number;
     visible?: boolean;
     class?: string;
   } = $props();
@@ -49,7 +51,7 @@
       visible: visible && !engine.overlay && right > left && bottom > top,
     };
     busy = true;
-    (recording ? api.playRecording(id, rect) : api.player(id, rect))
+    (recording ? api.playRecording(id, rect) : api.player(id, rect, zoom))
       .then(() => (error = ""))
       .catch((e) => (error = message(e)))
       .finally(() => {
@@ -86,6 +88,7 @@
   });
   $effect(() => {
     visible;
+    zoom;
     engine.overlay;
     sync();
   });

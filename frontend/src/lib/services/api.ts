@@ -21,7 +21,8 @@ export const api = {
   revoke: (id: string) => call("Revoke", id),
   bind: (input: Row) => call<Row>("BindSession", input),
   sessionID: () => call<string>("NewSessionID"),
-  player: (id: string, rect: Row) => call("SyncPlayer", id, rect),
+  player: (id: string, rect: Row, zoom: number) =>
+    call("SyncPlayerWithZoom", id, rect, zoom),
   stopPlayer: (id: string) => call("StopPlayer", id),
   hidePlayers: () => call("HidePlayers"),
   mute: (id: string, muted: boolean) => call("Mute", id, muted),

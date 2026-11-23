@@ -42,13 +42,12 @@ func SetBounds(parent, h uintptr, r model.Rect, visible bool) {
 	}
 	scale := float64(d) / 96
 	px := func(v int) uintptr { return uintptr(int32(math.Round(float64(v) * scale))) }
-	position.Call(h, 0, px(r.X), px(r.Y), px(r.Width), px(r.Height), 0x0010|0x0040)
 	clip, _, _ := rectRegion.Call(px(r.ClipX), px(r.ClipY), px(r.ClipX+r.ClipWidth), px(r.ClipY+r.ClipHeight))
 	ok, _, _ := region.Call(h, clip, 1)
 	if ok == 0 {
 		deleteObject.Call(clip)
 	}
-	show.Call(h, 5)
+	position.Call(h, 0, px(r.X), px(r.Y), px(r.Width), px(r.Height), 0x0010|0x0040)
 }
 func Destroy(h uintptr) { destroy.Call(h) }
 func Hide(h uintptr)    { show.Call(h, 0) }

@@ -13,6 +13,7 @@
   } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import NativePlayer from "./native-player.svelte";
+  import ZoomSlider from "./zoom-slider.svelte";
   import AudioMeter from "../metrics/audio-meter.svelte";
   import JuriRoundHud from "../juri/juri-round-hud.svelte";
   import { api } from "$lib/services/api";
@@ -43,7 +44,8 @@
   );
 
   let focusId = $state<string | null>(null);
-  let audioMuted = $state<Record<string, boolean>>({});
+  let audibleId = $state<string | null>(null);
+  let zoomed = $state<Record<string, number>>({});
   let hudCollapsed = $state(false);
 
   $effect(() => {
@@ -102,10 +104,10 @@
   });
 
   async function toggleAudio(id: string) {
-    const nextMuted = !audioMuted[id];
-    audioMuted[id] = nextMuted;
+    const nextMuted = audibleId === id;
     try {
       await api.mute(id, nextMuted);
+      audibleId = nextMuted ? null : id;
     } catch {
       // Ignore audio mute error if engine in mock
     }
@@ -252,10 +254,10 @@
                   type="button"
                   onclick={() => toggleAudio(slot.channelId)}
                   class="flex h-6 w-6 items-center justify-center rounded text-zinc-300 transition hover:bg-white/15"
-                  aria-label={audioMuted[slot.channelId] ? "Nyalakan suara" : "Bisukan suara"}
-                  title={audioMuted[slot.channelId] ? "Nyalakan suara" : "Bisukan"}
+                  aria-label={audibleId !== slot.channelId ? "Nyalakan suara" : "Bisukan suara"}
+                  title={audibleId !== slot.channelId ? "Nyalakan suara" : "Bisukan"}
                 >
-                  {#if audioMuted[slot.channelId]}
+                  {#if audibleId !== slot.channelId}
                     <VolumeX class="h-3.5 w-3.5 text-zinc-500" />
                   {:else}
                     <Volume2 class="h-3.5 w-3.5 text-sky-400" />
@@ -283,6 +285,7 @@
               {#if engine.connected}
                 <NativePlayer
                   id={slot.channelId}
+                  zoom={zoomed[slot.channelId] ?? 100}
                   visible={!focusId || focusId === slot.channelId}
                   class="h-full w-full"
                 />
@@ -318,6 +321,12 @@
 
             <!-- Bottom: Active Audio Meter with Live Waveform Graph -->
             <div class="shrink-0 bg-[#0e1416]/95 pt-0.5">
+              {#if engine.connected && engine.channels.some((channel) => channel.id === slot.channelId)}
+                <ZoomSlider
+                  value={zoomed[slot.channelId] ?? 100}
+                  onChange={(value) => (zoomed[slot.channelId] = value)}
+                />
+              {/if}
               <AudioMeter metric={engine.metrics[slot.channelId]} compact />
             </div>
           </article>

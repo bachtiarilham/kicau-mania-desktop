@@ -19,7 +19,7 @@ func TestNativeRTSPEmbeddingAndCleanup(t *testing.T) {
 	if binary == "" || source == "" {
 		t.Skip("Set KICAU_TEST_VLC and isolated KICAU_TEST_NVR_RTSP_URL")
 	}
-	testNativePlayback(t, binary, source, 3*time.Second)
+	testNativePlayback(t, binary, source, 3*time.Second, true)
 }
 
 // Multiple real streams must advance concurrently, not just open successfully.
@@ -31,12 +31,12 @@ func TestNativeConcurrentRTSP(t *testing.T) {
 	for i, source := range strings.Split(sources, ",") {
 		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
 			t.Parallel()
-			testNativePlayback(t, binary, strings.TrimSpace(source), 15*time.Second)
+			testNativePlayback(t, binary, strings.TrimSpace(source), 15*time.Second, false)
 		})
 	}
 }
 
-func testNativePlayback(t *testing.T, binary, source string, sample time.Duration) {
+func testNativePlayback(t *testing.T, binary, source string, sample time.Duration, checkZoom bool) {
 	t.Helper()
 	user := windows.NewLazySystemDLL("user32.dll")
 	type msg struct {
@@ -130,6 +130,17 @@ func testNativePlayback(t *testing.T, binary, source string, sample time.Duratio
 	}
 	if !video {
 		t.Fatal("VLC reached playback without a video output")
+	}
+	if checkZoom {
+		for _, percent := range []int{150, 300, 100} {
+			worker.SetZoom(percent)
+			worker.mu.Lock()
+			applied := worker.appliedZoom
+			worker.mu.Unlock()
+			if applied != percent {
+				t.Fatalf("VLC did not apply zoom %d%%, got %d%%", percent, applied)
+			}
+		}
 	}
 	before, ok := worker.Stats()
 	if !ok {

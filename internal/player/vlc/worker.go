@@ -45,7 +45,7 @@ func load(path string) (*library, error) {
 		return nil, errors.New("libvlc.dll gagal dimuat; periksa paket VLC amd64 dan folder plugins")
 	}
 	l := &library{dll: &windows.DLL{Name: path, Handle: h}, procs: map[string]*windows.Proc{}}
-	for _, name := range []string{"libvlc_new", "libvlc_release", "libvlc_media_new_location", "libvlc_media_add_option", "libvlc_media_release", "libvlc_media_get_stats", "libvlc_media_player_new_from_media", "libvlc_media_player_set_hwnd", "libvlc_media_player_play", "libvlc_media_player_stop", "libvlc_media_player_release", "libvlc_media_player_get_state", "libvlc_media_player_has_vout", "libvlc_media_player_get_hwnd", "libvlc_audio_set_mute", "libvlc_video_set_mouse_input", "libvlc_video_set_key_input"} {
+	for _, name := range []string{"libvlc_new", "libvlc_release", "libvlc_media_new_location", "libvlc_media_add_option", "libvlc_media_release", "libvlc_media_get_stats", "libvlc_media_player_new_from_media", "libvlc_media_player_set_hwnd", "libvlc_media_player_play", "libvlc_media_player_stop", "libvlc_media_player_release", "libvlc_media_player_get_state", "libvlc_media_player_has_vout", "libvlc_media_player_get_hwnd", "libvlc_audio_set_mute", "libvlc_video_set_mouse_input", "libvlc_video_set_key_input", "libvlc_video_get_size", "libvlc_video_set_crop_geometry"} {
 		p, e := l.dll.FindProc(name)
 		if e != nil {
 			return nil, errors.New("Versi libVLC tidak kompatibel; gunakan paket VLC 3.x")
@@ -79,6 +79,7 @@ type Worker struct {
 	once                    sync.Once
 	proxyClose              func()
 	muted                   bool
+	zoom, appliedZoom       int
 }
 
 func (w *Worker) Done() <-chan struct{} { return w.done }
@@ -212,6 +213,7 @@ func StartWithCache(binary, source string, hwnd uintptr, headers string, cacheMS
 					}
 					l.call("libvlc_audio_set_mute", player, mute)
 				}
+				w.applyZoom()
 				var stats mediaStats
 				statsOK := live && l.call("libvlc_media_get_stats", media, uintptr(unsafe.Pointer(&stats))) != 0
 				w.mu.Unlock()

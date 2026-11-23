@@ -114,9 +114,14 @@ func (c *Client) File(ctx context.Context, id string) (*http.Response, error) {
 }
 func (c *Client) Metrics(ctx context.Context, emit func(any)) {
 	for ctx.Err() == nil {
-		url := strings.Replace(strings.Replace(c.Base, "https://", "wss://", 1), "http://", "ws://", 1) + "/api/v1/metrics"
+		base := strings.Replace(strings.Replace(c.Base, "https://", "wss://", 1), "http://", "ws://", 1)
 		dial := websocket.Dialer{Subprotocols: []string{"edge-v1"}, HandshakeTimeout: 5 * time.Second}
-		conn, _, e := dial.DialContext(ctx, url, nil)
+		header := http.Header{}
+		header.Set("X-Local-Control", c.Nonce())
+		conn, res, e := dial.DialContext(ctx, base+"/api/v1/local/preview-metrics", header)
+		if e != nil && res != nil && res.StatusCode == http.StatusNotFound {
+			conn, _, e = dial.DialContext(ctx, base+"/api/v1/metrics", nil)
+		}
 		if e == nil {
 			emit(map[string]any{"connection": "connected"})
 			done := make(chan struct{})

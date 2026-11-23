@@ -12,6 +12,7 @@ import (
 )
 
 type pane struct {
+	source    string
 	handle    uintptr
 	worker    *vlc.Worker
 	closed    bool
@@ -20,6 +21,7 @@ type pane struct {
 	bounds    model.Rect
 	hasBounds bool
 	ready     bool
+	zoom      int
 }
 type Manager struct {
 	mu          sync.Mutex
@@ -35,17 +37,35 @@ func New(binary string, parent func() uintptr, emit func(model.PlayerStatus)) *M
 	return &Manager{panes: map[string]*pane{}, Parent: parent, Binary: binary, Emit: emit}
 }
 func (m *Manager) Sync(id, source, headers string, r model.Rect) error {
+	return m.SyncWithZoom(id, source, headers, r, 100)
+}
+
+func (m *Manager) SyncWithZoom(id, source, headers string, r model.Rect, zoom int) error {
 	m.mu.Lock()
 	p := m.panes[id]
+	if p != nil && p.source != source {
+		delete(m.panes, id)
+		m.mu.Unlock()
+		p.close()
+		return m.SyncWithZoom(id, source, headers, r, zoom)
+	}
 	if p == nil {
 		if len(m.panes) >= 24 {
 			m.mu.Unlock()
 			return errors.New("Maksimal 24 player aktif")
 		}
-		p = &pane{stop: make(chan struct{})}
+		p = &pane{source: source, stop: make(chan struct{})}
 		m.panes[id] = p
 	}
 	m.mu.Unlock()
+	p.mu.Lock()
+	if p.zoom != zoom {
+		p.zoom = zoom
+		if p.worker != nil {
+			p.worker.SetZoom(zoom)
+		}
+	}
+	p.mu.Unlock()
 	var err error
 	created := false
 	application.InvokeSync(func() {
@@ -73,21 +93,24 @@ func (m *Manager) Sync(id, source, headers string, r model.Rect) error {
 		return err
 	}
 	if created {
+		live := strings.HasPrefix(source, "rtsp://") || strings.HasPrefix(source, "rtsps://")
 		m.Emit(model.PlayerStatus{ChannelID: id, State: "CONNECTING"})
 		go func() {
 			for delay := time.Second; ; {
 				started := time.Now()
 				w, e := vlc.StartWithCache(m.Binary, source, p.handle, headers, m.LiveCacheMS, func(progress vlc.Progress) {
-					isReady := progress.State == "PLAYING" && progress.Displayed > 0
-					p.mu.Lock()
-					if isReady != p.ready && !p.closed && p.handle != 0 {
-						p.ready = isReady
-						parent := m.Parent()
-						application.InvokeSync(func() {
-							native.SetBounds(parent, p.handle, p.bounds, isReady)
+					// Once shown, keep the native surface during brief stalls.
+					// Reset readiness only when this VLC worker actually exits.
+					if progress.State == "PLAYING" && (progress.Decoded > 0 || progress.Displayed > 0 || !live) {
+						application.InvokeAsync(func() {
+							p.mu.Lock()
+							defer p.mu.Unlock()
+							if !p.ready && !p.closed && p.handle != 0 {
+								p.ready = true
+								native.SetBounds(m.Parent(), p.handle, p.bounds, true)
+							}
 						})
 					}
-					p.mu.Unlock()
 
 					state := progress.State
 					message := ""
@@ -107,13 +130,16 @@ func (m *Manager) Sync(id, source, headers string, r model.Rect) error {
 				})
 				p.mu.Lock()
 				if p.closed {
+					p.mu.Unlock()
 					if w != nil {
 						w.Close()
 					}
-					p.mu.Unlock()
 					return
 				}
 				p.worker = w
+				if w != nil {
+					w.SetZoom(p.zoom)
+				}
 				p.mu.Unlock()
 				if w != nil {
 					m.mu.Lock()
@@ -133,13 +159,15 @@ func (m *Manager) Sync(id, source, headers string, r model.Rect) error {
 					}
 					w.Close()
 				}
-				p.mu.Lock()
-				p.ready = false
-				if p.handle != 0 && !p.closed {
-					application.InvokeSync(func() { native.Hide(p.handle) })
-				}
-				p.mu.Unlock()
-				if !strings.HasPrefix(source, "rtsp://") && !strings.HasPrefix(source, "rtsps://") {
+				application.InvokeSync(func() {
+					p.mu.Lock()
+					defer p.mu.Unlock()
+					p.ready = false
+					if p.handle != 0 && !p.closed {
+						native.Hide(p.handle)
+					}
+				})
+				if !live {
 					return
 				}
 				if time.Since(started) > 30*time.Second {
@@ -166,19 +194,22 @@ func (m *Manager) Stop(id string) {
 		m.audible = ""
 	}
 	m.mu.Unlock()
-	if p == nil {
-		return
+	if p != nil {
+		p.close()
 	}
+}
+
+func (p *pane) close() {
 	p.mu.Lock()
 	if !p.closed {
 		close(p.stop)
 	}
 	p.closed = true
-	if p.worker != nil {
-		p.worker.Close()
-	}
-	h := p.handle
+	worker, h := p.worker, p.handle
 	p.mu.Unlock()
+	if worker != nil {
+		worker.Close()
+	}
 	if h != 0 {
 		application.InvokeSync(func() { native.Destroy(h) })
 	}
@@ -192,6 +223,7 @@ func (m *Manager) Mute(id string, muted bool) error {
 	} else {
 		m.audible = id
 	}
+	audible := m.audible
 	list := make(map[string]*pane, len(m.panes))
 	for k, v := range m.panes {
 		list[k] = v
@@ -200,7 +232,7 @@ func (m *Manager) Mute(id string, muted bool) error {
 	for k, p := range list {
 		p.mu.Lock()
 		if p.worker != nil {
-			_ = p.worker.Command([]any{"set_property", "mute", muted || k != id})
+			_ = p.worker.Command([]any{"set_property", "mute", k != audible})
 		}
 		p.mu.Unlock()
 	}
@@ -219,7 +251,6 @@ func (m *Manager) Hide() {
 			if p.handle != 0 {
 				native.Hide(p.handle)
 				p.hasBounds = false
-				p.ready = false
 			}
 			p.mu.Unlock()
 		}
