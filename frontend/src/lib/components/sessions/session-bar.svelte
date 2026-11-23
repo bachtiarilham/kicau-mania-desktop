@@ -17,6 +17,7 @@
   import { api } from "$lib/services/api";
   import { engine } from "$lib/state/engine.svelte";
   import { roundStore } from "$lib/state/round.svelte";
+  import RoundTimeUpDialog from "./round-timeup-dialog.svelte";
 
   let confirm = $state(false);
   let starting = $state(false);
@@ -246,6 +247,9 @@
 {#if engine.session?.error}
   <div class="error mx-6 my-2" role="alert">{engine.session.error}</div>
 {/if}
+
+<!-- Dialog Keputusan Waktu Habis: Lanjutkan atau Stop -->
+<RoundTimeUpDialog onStopAndSave={handleStopClick} />
 
 <!-- Quick Save Dialog (Muncul setelah klik STOP) -->
 <Dialog.Root bind:open={confirm}>

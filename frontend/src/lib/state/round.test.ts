@@ -72,6 +72,16 @@ describe("roundStore and judge rotation matrix", () => {
 
     roundStore.stopRound();
     expect(roundStore.state).toBe("FINISHED");
-    expect(roundStore.rotationAlert).toBe(true);
+    expect(roundStore.timeUpDialog).toBe(false);
+  });
+
+  it("supports continuing round when time is up", () => {
+    roundStore.startRound();
+    roundStore.roundRemainingSeconds = 0;
+    roundStore.timeUpDialog = true;
+
+    roundStore.continueRound(60);
+    expect(roundStore.roundRemainingSeconds).toBe(60);
+    expect(roundStore.timeUpDialog).toBe(false);
   });
 });

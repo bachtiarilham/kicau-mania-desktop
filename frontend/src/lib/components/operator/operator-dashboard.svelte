@@ -17,7 +17,10 @@
     ShieldAlert,
     CheckCircle2,
     Sparkles,
+    HardDrive,
   } from "@lucide/svelte";
+  import * as Dialog from "$lib/components/ui/alert-dialog";
+  import RoundTimeUpDialog from "../sessions/round-timeup-dialog.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
@@ -37,6 +40,62 @@
   let disposed = false;
   let audibleId = $state<string | null>(null);
   let zoomed = $state<Record<string, number>>({});
+
+  // Quick Save Session Dialog state
+  let confirmSave = $state(false);
+  let sessionName = $state("");
+  let selectedFormat = $state("mp4");
+  let storageDir = $state("D:\\KicauRecordings");
+
+  $effect(() => {
+    engine.overlay = confirmSave;
+  });
+
+  function generateSessionName(): string {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dateStr = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+    const cleanEvent = roundStore.eventName ? roundStore.eventName.replace(/\s+/g, "_") : "Lomba";
+    const cleanSession = roundStore.sessionName ? roundStore.sessionName.replace(/\s+/g, "_") : "Ronde";
+    return `${cleanEvent}_${cleanSession}_${dateStr}`;
+  }
+
+  function handleStopClick() {
+    void api.hidePlayers();
+    roundStore.stopRound();
+    if (!sessionName) {
+      sessionName = generateSessionName();
+    }
+    void api
+      .config()
+      .then((cfg) => {
+        if (cfg?.recordings_dir) storageDir = cfg.recordings_dir;
+      })
+      .catch(() => {});
+    confirmSave = true;
+  }
+
+  async function handleConfirmSave() {
+    confirmSave = false;
+    const currentSessionId = engine.session?.id;
+    await engine.stop();
+    engine.notice = `Menyimpan rekaman sesi '${sessionName}' (${selectedFormat.toUpperCase()}) ke ${storageDir}...`;
+
+    if (currentSessionId) {
+      void api
+        .saveSession(currentSessionId, sessionName, storageDir, selectedFormat)
+        .then((savedFiles) => {
+          if (Array.isArray(savedFiles) && savedFiles.length > 0) {
+            engine.notice = `Berhasil menyimpan ${savedFiles.length} file rekaman sesi '${sessionName}' ke: ${storageDir}`;
+          }
+        })
+        .catch((err) => {
+          console.warn("Gagal simpan rekaman sesi:", err);
+          engine.error =
+            "Gagal mengekspor rekaman: " + (err?.message || String(err));
+        });
+    }
+  }
 
   // Local config form state
   let editEventName = $state(roundStore.eventName);
@@ -255,7 +314,7 @@
           <button
             type="button"
             disabled={roundStore.state === "IDLE" || roundStore.state === "FINISHED"}
-            onclick={() => roundStore.stopRound()}
+            onclick={handleStopClick}
             class="flex h-10 items-center gap-2 rounded-full px-5 text-xs font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 shadow-red-600/30 hover:shadow-red-600/50"
           >
             <div class="flex h-5 w-5 items-center justify-center rounded-full bg-accent">
@@ -602,3 +661,126 @@
     </div>
   </div>
 {/if}
+
+<!-- Dialog Keputusan Waktu Habis: Lanjutkan atau Stop -->
+<RoundTimeUpDialog onStopAndSave={handleStopClick} />
+
+<!-- Quick Save Dialog (Muncul setelah klik STOP) -->
+<Dialog.Root bind:open={confirmSave}>
+  <Dialog.Content class="max-w-md bg-card border-border text-foreground">
+    <Dialog.Header>
+      <Dialog.Title class="text-base font-bold flex items-center gap-2">
+        <HardDrive size={18} class="text-primary" />
+        Simpan Rekaman Sesi Lomba
+      </Dialog.Title>
+      <Dialog.Description class="text-xs text-muted-foreground">
+        Sesi ronde telah dihentikan. Anda dapat mengubah nama sesi dan format sebelum disimpan permanen.
+      </Dialog.Description>
+    </Dialog.Header>
+
+    <div class="space-y-4 py-3">
+      <!-- Input Nama Sesi -->
+      <div class="space-y-1.5">
+        <Label for="op-session-name" class="text-xs font-semibold text-foreground">Nama Sesi Rekaman</Label>
+        <Input
+          id="op-session-name"
+          bind:value={sessionName}
+          placeholder="Contoh: Murai Batu A - Ronde 1"
+          class="bg-card border-border text-sm"
+        />
+        <p class="text-[10px] text-muted-foreground">
+          Bisa diubah sesuai kelas burung, atau biarkan default berformat event & tanggal.
+        </p>
+      </div>
+
+      <!-- Pilihan Format Video -->
+      <div class="space-y-1.5">
+        <Label class="text-xs font-semibold text-foreground">Format File Rekaman</Label>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            class={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+              selectedFormat === "mp4"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground"
+            }`}
+            onclick={() => (selectedFormat = "mp4")}
+          >
+            <span>MP4 (Rekomendasi)</span>
+            <span class="text-[10px] opacity-70">Universal</span>
+          </button>
+
+          <button
+            type="button"
+            class={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
+              selectedFormat === "mkv"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground"
+            }`}
+            onclick={() => (selectedFormat = "mkv")}
+          >
+            <span>MKV</span>
+            <span class="text-[10px] opacity-70">Tahan Crash</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Lokasi Penyimpanan Harddisk -->
+      <div class="space-y-1.5">
+        <Label class="text-xs font-semibold text-foreground">Lokasi Harddisk</Label>
+        <div class="flex gap-2">
+          <Input
+            bind:value={storageDir}
+            placeholder="D:\KicauRecordings"
+            class="bg-card border-border text-xs font-mono"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onclick={async () => {
+              try {
+                const dir = await api.selectFolder();
+                if (dir) storageDir = dir;
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+          >
+            Pilih Folder...
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onclick={async () => {
+              try {
+                await api.openFolder();
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+            title="Buka folder di File Explorer"
+          >
+            📁 Buka
+          </Button>
+        </div>
+        <p class="text-[10px] text-muted-foreground">
+          Folder tujuan penyimpanan video rekaman ronde ini.
+        </p>
+      </div>
+    </div>
+
+    <Dialog.Footer class="gap-2 sm:gap-0">
+      <Dialog.Cancel class="text-xs" onclick={() => (confirmSave = false)}>
+        Batal & Lanjutkan Sesi
+      </Dialog.Cancel>
+      <Dialog.Action
+        class="bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold"
+        onclick={handleConfirmSave}
+      >
+        Simpan Rekaman Ronde
+      </Dialog.Action>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

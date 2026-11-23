@@ -288,7 +288,7 @@
         >
           <CheckCircle2 class="h-5 w-5 shrink-0 text-emerald-700" />
           <div class="text-[11px] font-bold leading-tight">
-            Ronde 10 Menit Selesai! Rekaman otomatis disimpan.
+            Waktu 10 Menit Selesai! Menunggu konfirmasi operator di arena.
           </div>
         </div>
       {:else if isShiftTimeUp}

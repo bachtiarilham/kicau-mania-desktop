@@ -50,7 +50,7 @@
   let audibleId = $state<string | null>(null);
   let zoomed = $state<Record<string, number>>({});
   let hudCollapsed = $state(false);
-  let autoRotate = $state(true);
+  let autoRotate = $state(false);
 
   // Auto-follow assigned rotation for the current judge during a round
   $effect(() => {

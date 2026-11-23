@@ -47,6 +47,8 @@ class RoundStore {
 
   state = $state<RoundState>("IDLE");
   rotationAlert = $state(false);
+  timeUpDialog = $state(false);
+  overtimeSeconds = $state(0);
 
   // Backward-compatibility properties for existing components/tests
   get durationSeconds(): number {
@@ -101,6 +103,8 @@ class RoundStore {
         currentShift: this.currentShift,
         state: this.state,
         rotationAlert: this.rotationAlert,
+        timeUpDialog: this.timeUpDialog,
+        overtimeSeconds: this.overtimeSeconds,
         startedAt: this.startedAt,
       },
     });
@@ -120,6 +124,8 @@ class RoundStore {
     this.currentShift = payload.currentShift ?? this.currentShift;
     this.state = payload.state ?? this.state;
     this.rotationAlert = payload.rotationAlert ?? this.rotationAlert;
+    this.timeUpDialog = payload.timeUpDialog ?? this.timeUpDialog;
+    this.overtimeSeconds = payload.overtimeSeconds ?? this.overtimeSeconds;
     this.startedAt = payload.startedAt ?? this.startedAt;
 
     if (this.state === "RUNNING" && !this.timerInterval) {
@@ -233,13 +239,24 @@ class RoundStore {
     }
   }
 
+  continueRound(extraSeconds = 0) {
+    if (extraSeconds > 0) {
+      this.roundRemainingSeconds += extraSeconds;
+      this.shiftRemainingSeconds += extraSeconds;
+    }
+    this.timeUpDialog = false;
+    this.rotationAlert = false;
+    this.broadcast();
+  }
+
   stopRound() {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
     }
     this.state = "FINISHED";
-    this.rotationAlert = true;
+    this.timeUpDialog = false;
+    this.rotationAlert = false;
     this.broadcast();
 
     // Stop recording on engine
@@ -271,6 +288,8 @@ class RoundStore {
     this.shiftRemainingSeconds = this.shiftDurationSeconds;
     this.currentShift = 1;
     this.rotationAlert = false;
+    this.timeUpDialog = false;
+    this.overtimeSeconds = 0;
     this.startedAt = null;
     this.broadcast();
   }
@@ -287,6 +306,15 @@ class RoundStore {
       // Decrement total round seconds
       if (this.roundRemainingSeconds > 0) {
         this.roundRemainingSeconds -= 1;
+        if (this.roundRemainingSeconds === 0) {
+          // Time is up! DO NOT auto-stop recording.
+          // Trigger the dialog so field operator can choose to continue or stop.
+          this.timeUpDialog = true;
+          this.rotationAlert = true;
+        }
+      } else {
+        // Overtime: keep counting up so operator knows how much extra time has elapsed
+        this.overtimeSeconds += 1;
       }
 
       // Decrement shift seconds
@@ -296,9 +324,9 @@ class RoundStore {
 
       // Check shift transition (every 150s)
       if (this.shiftRemainingSeconds === 0) {
-        if (this.roundRemainingSeconds > 0) {
+        if (this.currentShift < 4) {
           // Advance to next shift
-          this.currentShift = Math.min(4, this.currentShift + 1);
+          this.currentShift += 1;
           this.shiftRemainingSeconds = this.shiftDurationSeconds;
           this.rotationAlert = true;
           // Auto-clear rotation alert after 10 seconds
@@ -306,12 +334,6 @@ class RoundStore {
             this.rotationAlert = false;
             this.broadcast();
           }, 10000);
-        } else {
-          // Entire round finished (600 seconds)
-          this.state = "FINISHED";
-          this.rotationAlert = true;
-          if (this.timerInterval) clearInterval(this.timerInterval);
-          this.stopRound();
         }
       }
 
