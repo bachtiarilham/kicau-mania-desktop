@@ -16,6 +16,7 @@
   } from "@lucide/svelte";
   import { api } from "$lib/services/api";
   import { engine } from "$lib/state/engine.svelte";
+  import { roundStore } from "$lib/state/round.svelte";
 
   let confirm = $state(false);
   let starting = $state(false);
@@ -42,8 +43,9 @@
     const d = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
     const dateStr = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
-    const timeStr = `${pad(d.getHours())}${pad(d.getMinutes())}`;
-    return `Sesi_${dateStr}_${timeStr}`;
+    const cleanEvent = roundStore.eventName ? roundStore.eventName.replace(/\s+/g, "_") : "Lomba";
+    const cleanSession = roundStore.sessionName ? roundStore.sessionName.replace(/\s+/g, "_") : "Ronde";
+    return `${cleanEvent}_${cleanSession}_${dateStr}`;
   }
 
   let elapsed = $derived(
@@ -67,6 +69,12 @@
     ).padStart(2, "0")}`,
   );
 
+  let formattedRoundRemaining = $derived(
+    `${String(Math.floor(roundStore.roundRemainingSeconds / 60)).padStart(2, "0")}:${String(
+      roundStore.roundRemainingSeconds % 60,
+    ).padStart(2, "0")}`,
+  );
+
   $effect(() => {
     engine.overlay = confirm;
   });
@@ -77,7 +85,10 @@
     sessionName = generateSessionName();
     try {
       if (!engine.draftID) engine.draftID = await api.sessionID();
-      await engine.start(engine.draftID);
+      await roundStore.startRound();
+      if (!engine.running && !engine.busy) {
+        await engine.start(engine.draftID);
+      }
       engine.draftID = "";
     } catch {
     } finally {
@@ -87,6 +98,7 @@
 
   function handleStopClick() {
     void api.hidePlayers();
+    roundStore.stopRound();
     if (!sessionName) {
       sessionName = generateSessionName();
     }
@@ -149,7 +161,14 @@
       <div class="text-xs font-semibold tracking-wide">
         {engine.running ? "MEREKAM" : engine.session?.state || "STANDBY"}
       </div>
-      {#if engine.running || elapsed > 0}
+      {#if engine.running || roundStore.state === "RUNNING"}
+        <span class="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded border border-border" title="Sisa Waktu Ronde 10 Menit">
+          Ronde: {formattedRoundRemaining}
+        </span>
+        <span class="font-mono text-[11px] font-semibold text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20" title="Shift & Countdown Area 150 Detik">
+          Shift {roundStore.currentShift}/4 ({roundStore.shiftRemainingSeconds}s)
+        </span>
+      {:else if elapsed > 0}
         <span class="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded border border-border">
           {formattedElapsed}
         </span>

@@ -7,12 +7,23 @@ export interface RoundConfig {
   startTime: string;
   endTime: string;
   jurors: string[];
-  durationSeconds: number;
+  totalDurationSeconds?: number;
+  shiftDurationSeconds?: number;
+  durationSeconds?: number;
 }
 
 export type RoundState = "IDLE" | "RUNNING" | "PAUSED" | "FINISHED";
 
-const STORAGE_KEY = "kicau_round_config_v1";
+export function getJudgeAssignedZone(
+  judgeIndex: number,
+  currentShift: number
+): "A" | "B" | "C" | "D" {
+  const zones: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
+  const zoneIndex = (((judgeIndex % 4) + (Math.max(1, currentShift) - 1)) % 4 + 4) % 4;
+  return zones[zoneIndex];
+}
+
+const STORAGE_KEY = "kicau_round_config_v2";
 const SYNC_CHANNEL = "kicau_round_sync_channel";
 
 class RoundStore {
@@ -26,10 +37,31 @@ class RoundStore {
     "Juri 3: Zffgfg Hnnn",
     "Juri 4: Ijdjff Jndd",
   ]);
-  durationSeconds = $state(150);
-  remainingSeconds = $state(150);
+
+  // Round is 10 minutes (600 seconds) divided into 4 shifts of 150 seconds each
+  totalDurationSeconds = $state(600);
+  shiftDurationSeconds = $state(150);
+  roundRemainingSeconds = $state(600);
+  shiftRemainingSeconds = $state(150);
+  currentShift = $state(1);
+
   state = $state<RoundState>("IDLE");
   rotationAlert = $state(false);
+
+  // Backward-compatibility properties for existing components/tests
+  get durationSeconds(): number {
+    return this.shiftDurationSeconds;
+  }
+  set durationSeconds(val: number) {
+    this.shiftDurationSeconds = val;
+  }
+
+  get remainingSeconds(): number {
+    return this.shiftRemainingSeconds;
+  }
+  set remainingSeconds(val: number) {
+    this.shiftRemainingSeconds = val;
+  }
 
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private channel: BroadcastChannel | null = null;
@@ -61,9 +93,12 @@ class RoundStore {
         sessionName: this.sessionName,
         startTime: this.startTime,
         endTime: this.endTime,
-        jurors: [...this.jurors],
-        durationSeconds: this.durationSeconds,
-        remainingSeconds: this.remainingSeconds,
+        jurors: this.jurors,
+        totalDurationSeconds: this.totalDurationSeconds,
+        shiftDurationSeconds: this.shiftDurationSeconds,
+        roundRemainingSeconds: this.roundRemainingSeconds,
+        shiftRemainingSeconds: this.shiftRemainingSeconds,
+        currentShift: this.currentShift,
         state: this.state,
         rotationAlert: this.rotationAlert,
         startedAt: this.startedAt,
@@ -78,8 +113,11 @@ class RoundStore {
     this.startTime = payload.startTime ?? this.startTime;
     this.endTime = payload.endTime ?? this.endTime;
     this.jurors = Array.isArray(payload.jurors) ? payload.jurors : this.jurors;
-    this.durationSeconds = payload.durationSeconds ?? this.durationSeconds;
-    this.remainingSeconds = payload.remainingSeconds ?? this.remainingSeconds;
+    this.totalDurationSeconds = payload.totalDurationSeconds ?? this.totalDurationSeconds;
+    this.shiftDurationSeconds = payload.shiftDurationSeconds ?? this.shiftDurationSeconds;
+    this.roundRemainingSeconds = payload.roundRemainingSeconds ?? this.roundRemainingSeconds;
+    this.shiftRemainingSeconds = payload.shiftRemainingSeconds ?? this.shiftRemainingSeconds;
+    this.currentShift = payload.currentShift ?? this.currentShift;
     this.state = payload.state ?? this.state;
     this.rotationAlert = payload.rotationAlert ?? this.rotationAlert;
     this.startedAt = payload.startedAt ?? this.startedAt;
@@ -103,7 +141,8 @@ class RoundStore {
           startTime: this.startTime,
           endTime: this.endTime,
           jurors: this.jurors,
-          durationSeconds: this.durationSeconds,
+          totalDurationSeconds: this.totalDurationSeconds,
+          shiftDurationSeconds: this.shiftDurationSeconds,
         })
       );
     } catch {
@@ -122,9 +161,13 @@ class RoundStore {
         if (parsed.startTime) this.startTime = parsed.startTime;
         if (parsed.endTime) this.endTime = parsed.endTime;
         if (Array.isArray(parsed.jurors)) this.jurors = parsed.jurors;
-        if (typeof parsed.durationSeconds === "number") {
-          this.durationSeconds = parsed.durationSeconds;
-          this.remainingSeconds = parsed.durationSeconds;
+        if (typeof parsed.totalDurationSeconds === "number") {
+          this.totalDurationSeconds = parsed.totalDurationSeconds;
+          this.roundRemainingSeconds = parsed.totalDurationSeconds;
+        }
+        if (typeof parsed.shiftDurationSeconds === "number") {
+          this.shiftDurationSeconds = parsed.shiftDurationSeconds;
+          this.shiftRemainingSeconds = parsed.shiftDurationSeconds;
         }
       }
     } catch {
@@ -138,10 +181,22 @@ class RoundStore {
     if (config.startTime !== undefined) this.startTime = config.startTime;
     if (config.endTime !== undefined) this.endTime = config.endTime;
     if (config.jurors !== undefined) this.jurors = config.jurors;
-    if (config.durationSeconds !== undefined) {
-      this.durationSeconds = config.durationSeconds;
+    if (config.totalDurationSeconds !== undefined) {
+      this.totalDurationSeconds = config.totalDurationSeconds;
       if (this.state === "IDLE" || this.state === "FINISHED") {
-        this.remainingSeconds = config.durationSeconds;
+        this.roundRemainingSeconds = config.totalDurationSeconds;
+      }
+    }
+    if (config.shiftDurationSeconds !== undefined) {
+      this.shiftDurationSeconds = config.shiftDurationSeconds;
+      if (this.state === "IDLE" || this.state === "FINISHED") {
+        this.shiftRemainingSeconds = config.shiftDurationSeconds;
+      }
+    }
+    if (config.durationSeconds !== undefined && config.shiftDurationSeconds === undefined) {
+      this.shiftDurationSeconds = config.durationSeconds;
+      if (this.state === "IDLE" || this.state === "FINISHED") {
+        this.shiftRemainingSeconds = config.durationSeconds;
       }
     }
     this.saveToStorage();
@@ -155,8 +210,10 @@ class RoundStore {
     this.rotationAlert = false;
     this.startedAt = Date.now();
 
-    if (this.remainingSeconds <= 0) {
-      this.remainingSeconds = this.durationSeconds;
+    if (this.roundRemainingSeconds <= 0) {
+      this.roundRemainingSeconds = this.totalDurationSeconds;
+      this.shiftRemainingSeconds = this.shiftDurationSeconds;
+      this.currentShift = 1;
     }
 
     this.startLocalTicker();
@@ -172,7 +229,7 @@ class RoundStore {
         engine.draftID = "";
       }
     } catch {
-      // Gracefully ignore if engine disconnected or in headless test environment
+      // Gracefully ignore if engine disconnected or in test environment
     }
   }
 
@@ -191,7 +248,7 @@ class RoundStore {
         void engine.stop();
       }
     } catch (e) {
-      console.warn("Failed to auto-stop engine session:", e);
+      console.warn("Failed to stop engine recording:", e);
     }
   }
 
@@ -210,7 +267,9 @@ class RoundStore {
       this.timerInterval = null;
     }
     this.state = "IDLE";
-    this.remainingSeconds = this.durationSeconds;
+    this.roundRemainingSeconds = this.totalDurationSeconds;
+    this.shiftRemainingSeconds = this.shiftDurationSeconds;
+    this.currentShift = 1;
     this.rotationAlert = false;
     this.startedAt = null;
     this.broadcast();
@@ -225,15 +284,38 @@ class RoundStore {
         return;
       }
 
-      if (this.remainingSeconds > 0) {
-        this.remainingSeconds -= 1;
-        if (this.remainingSeconds === 0) {
+      // Decrement total round seconds
+      if (this.roundRemainingSeconds > 0) {
+        this.roundRemainingSeconds -= 1;
+      }
+
+      // Decrement shift seconds
+      if (this.shiftRemainingSeconds > 0) {
+        this.shiftRemainingSeconds -= 1;
+      }
+
+      // Check shift transition (every 150s)
+      if (this.shiftRemainingSeconds === 0) {
+        if (this.roundRemainingSeconds > 0) {
+          // Advance to next shift
+          this.currentShift = Math.min(4, this.currentShift + 1);
+          this.shiftRemainingSeconds = this.shiftDurationSeconds;
+          this.rotationAlert = true;
+          // Auto-clear rotation alert after 10 seconds
+          setTimeout(() => {
+            this.rotationAlert = false;
+            this.broadcast();
+          }, 10000);
+        } else {
+          // Entire round finished (600 seconds)
           this.state = "FINISHED";
           this.rotationAlert = true;
           if (this.timerInterval) clearInterval(this.timerInterval);
-          this.broadcast();
+          this.stopRound();
         }
       }
+
+      this.broadcast();
     }, 1000);
   }
 }

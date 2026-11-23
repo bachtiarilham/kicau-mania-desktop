@@ -7,6 +7,7 @@ class AuthStore {
   role = $state<UserRole | null>(null);
   userEmail = $state("");
   userName = $state("");
+  judgeIndex = $state(0); // 0 = Juri 1, 1 = Juri 2, 2 = Juri 3, 3 = Juri 4
 
   constructor() {
     this.loadFromStorage();
@@ -23,6 +24,9 @@ class AuthStore {
           this.role = parsed.role;
           this.userEmail = parsed.userEmail || "";
           this.userName = parsed.userName || "";
+          if (typeof parsed.judgeIndex === "number") {
+            this.judgeIndex = parsed.judgeIndex;
+          }
         }
       }
     } catch {
@@ -40,6 +44,7 @@ class AuthStore {
           role: this.role,
           userEmail: this.userEmail,
           userName: this.userName,
+          judgeIndex: this.judgeIndex,
         })
       );
     } catch {
@@ -47,11 +52,32 @@ class AuthStore {
     }
   }
 
-  login(role: UserRole, email?: string, name?: string) {
+  setJudgeIndex(idx: number) {
+    this.judgeIndex = Math.max(0, Math.min(3, idx));
+    this.saveToStorage();
+  }
+
+  login(role: UserRole, email?: string, name?: string, judgeIdx?: number) {
     this.isLoggedIn = true;
     this.role = role;
     this.userEmail = email || (role === "juri" ? "juri@kicaumania.com" : role === "operator" ? "operator@kicaumania.com" : "admin@kicaumania.com");
     this.userName = name || (role === "juri" ? "Dewan Juri Arena" : role === "operator" ? "Operator Arena" : "Administrator");
+
+    if (typeof judgeIdx === "number") {
+      this.judgeIndex = Math.max(0, Math.min(3, judgeIdx));
+    } else if (role === "juri") {
+      const combined = (this.userEmail + " " + this.userName).toLowerCase();
+      if (combined.includes("juri 4") || combined.includes("juri4")) {
+        this.judgeIndex = 3;
+      } else if (combined.includes("juri 3") || combined.includes("juri3")) {
+        this.judgeIndex = 2;
+      } else if (combined.includes("juri 2") || combined.includes("juri2")) {
+        this.judgeIndex = 1;
+      } else {
+        this.judgeIndex = 0;
+      }
+    }
+
     this.saveToStorage();
   }
 

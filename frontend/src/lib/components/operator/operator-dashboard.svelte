@@ -43,7 +43,8 @@
   let editSessionName = $state(roundStore.sessionName);
   let editStartTime = $state(roundStore.startTime);
   let editEndTime = $state(roundStore.endTime);
-  let editDuration = $state(roundStore.durationSeconds);
+  let editTotalDuration = $state(roundStore.totalDurationSeconds);
+  let editShiftDuration = $state(roundStore.shiftDurationSeconds);
   let editJurors = $state([...roundStore.jurors]);
 
   async function openEditModal() {
@@ -52,7 +53,8 @@
     editSessionName = roundStore.sessionName;
     editStartTime = roundStore.startTime;
     editEndTime = roundStore.endTime;
-    editDuration = roundStore.durationSeconds;
+    editTotalDuration = roundStore.totalDurationSeconds;
+    editShiftDuration = roundStore.shiftDurationSeconds;
     editJurors = [...roundStore.jurors];
     openingEditModal = true;
     engine.overlay = true;
@@ -77,20 +79,27 @@
   });
 
   function saveConfig() {
+    const total = Number(editTotalDuration) || 600;
+    const shift = Number(editShiftDuration) || 150;
     roundStore.updateConfig({
       eventName: editEventName,
       sessionName: editSessionName,
       startTime: editStartTime,
       endTime: editEndTime,
-      durationSeconds: Number(editDuration) || 150,
+      totalDurationSeconds: total,
+      shiftDurationSeconds: shift,
       jurors: editJurors,
     });
     closeEditModal();
   }
 
-  // Quick preset duration
-  function setDurationPreset(sec: number) {
-    roundStore.updateConfig({ durationSeconds: sec });
+  // Quick preset duration (total / 4 = shift)
+  function setDurationPreset(totalSec: number) {
+    const shiftSec = Math.floor(totalSec / 4);
+    roundStore.updateConfig({
+      totalDurationSeconds: totalSec,
+      shiftDurationSeconds: shiftSec,
+    });
   }
 
   // All 24 Gantangan Streams
@@ -183,37 +192,42 @@
       <div class="flex flex-wrap items-center gap-3">
         <!-- Duration Presets -->
         <div class="hidden items-center gap-1 rounded-lg border border-border bg-muted p-0.5 xl:flex">
-          {#each [120, 150, 180, 300] as sec}
+          {#each [{ sec: 600, label: "10m (Std 600s)" }, { sec: 300, label: "5m" }, { sec: 150, label: "2.5m" }] as p}
             <button
               type="button"
-              onclick={() => setDurationPreset(sec)}
-              class="rounded px-2 py-0.5 font-mono text-[10px] font-semibold transition {roundStore.durationSeconds === sec ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}"
+              onclick={() => setDurationPreset(p.sec)}
+              class="rounded px-2 py-0.5 font-mono text-[10px] font-semibold transition {roundStore.totalDurationSeconds === p.sec ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}"
             >
-              {sec}s
+              {p.label}
             </button>
           {/each}
         </div>
 
-        <!-- Giant Synchronized Countdown Timer -->
+        <!-- Giant Synchronized Countdown Timer (Dual Reading: 10m Round & 150s Shift) -->
         <div
-          class="flex items-center gap-2.5 rounded-xl border px-3 py-1 shadow-inner transition-all {roundStore.state === 'RUNNING' ? 'border-emerald-500/50 bg-emerald-50' : roundStore.remainingSeconds === 0 ? 'border-red-500/80 bg-red-50 animate-pulse' : 'border-border bg-muted'}"
+          class="flex items-center gap-2.5 rounded-xl border px-3 py-1 shadow-inner transition-all {roundStore.state === 'RUNNING' ? 'border-emerald-500/50 bg-emerald-50' : roundStore.roundRemainingSeconds === 0 ? 'border-red-500/80 bg-red-50 animate-pulse' : 'border-border bg-muted'}"
         >
           <div class="flex flex-col items-center">
             <span class="text-[8px] font-bold tracking-widest text-muted-foreground uppercase">
-              Timer Sisa
+              Ronde: Shift {roundStore.currentShift}/4
             </span>
-            <span
-              class="font-mono text-2xl font-black tracking-tight {roundStore.state === 'RUNNING' ? 'text-emerald-700' : roundStore.remainingSeconds === 0 ? 'text-red-700' : 'text-foreground'}"
-            >
-              {roundStore.remainingSeconds}s
-            </span>
+            <div class="flex items-baseline gap-1.5 font-mono">
+              <span
+                class="text-2xl font-black tracking-tight {roundStore.state === 'RUNNING' ? 'text-emerald-700' : roundStore.roundRemainingSeconds === 0 ? 'text-red-700' : 'text-foreground'}"
+              >
+                {Math.floor(roundStore.roundRemainingSeconds / 60)}:{String(roundStore.roundRemainingSeconds % 60).padStart(2, "0")}
+              </span>
+              <span class="text-xs font-bold text-amber-700">
+                ({roundStore.shiftRemainingSeconds}s)
+              </span>
+            </div>
           </div>
 
           <button
             type="button"
             onclick={() => roundStore.resetRound()}
             class="flex h-6 w-6 items-center justify-center rounded-lg bg-accent text-muted-foreground transition hover:bg-accent hover:text-foreground"
-            title="Reset timer ke awal"
+            title="Reset timer ke awal (10 Menit / 600 Detik)"
           >
             <RotateCcw class="h-3 w-3" />
           </button>
@@ -538,8 +552,21 @@
             <Input bind:value={editSessionName} placeholder="Sesi 1" class="mt-1 bg-muted" />
           </div>
           <div>
-            <Label class="text-xs text-muted-foreground">Durasi Timer (detik)</Label>
-            <Input type="number" bind:value={editDuration} placeholder="150" class="mt-1 bg-muted" />
+            <Label class="text-xs text-muted-foreground">Total Ronde (detik)</Label>
+            <Input type="number" bind:value={editTotalDuration} placeholder="600" class="mt-1 bg-muted" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <Label class="text-xs text-muted-foreground">Durasi Shift Area (detik)</Label>
+            <Input type="number" bind:value={editShiftDuration} placeholder="150" class="mt-1 bg-muted" />
+          </div>
+          <div>
+            <Label class="text-xs text-muted-foreground">Total Shift</Label>
+            <div class="mt-1 flex h-9 items-center rounded-md border border-input bg-muted px-3 font-mono text-xs text-foreground">
+              4 Shift Rotasi Area
+            </div>
           </div>
         </div>
 

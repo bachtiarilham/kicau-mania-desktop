@@ -19,7 +19,8 @@
   import JuriRoundHud from "../juri/juri-round-hud.svelte";
   import { api } from "$lib/services/api";
   import { engine } from "$lib/state/engine.svelte";
-  import { roundStore } from "$lib/state/round.svelte";
+  import { roundStore, getJudgeAssignedZone } from "$lib/state/round.svelte";
+  import { auth } from "$lib/state/auth.svelte";
   import { MOCK_GANTANGAN_STREAMS } from "$lib/services/livestream.mock";
   import type { GantanganStream } from "$lib/models/livestream.model";
 
@@ -49,6 +50,18 @@
   let audibleId = $state<string | null>(null);
   let zoomed = $state<Record<string, number>>({});
   let hudCollapsed = $state(false);
+  let autoRotate = $state(true);
+
+  // Auto-follow assigned rotation for the current judge during a round
+  $effect(() => {
+    if (autoRotate && (roundStore.state === "RUNNING" || roundStore.rotationAlert)) {
+      const assigned = getJudgeAssignedZone(auth.judgeIndex, roundStore.currentShift);
+      if (selectedZone !== assigned) {
+        selectedZone = assigned;
+        focusId = null;
+      }
+    }
+  });
 
   $effect(() => {
     if (typeof localStorage !== "undefined") {
@@ -160,6 +173,20 @@
           {/each}
         </div>
 
+        <!-- Auto-Rotate Follow Toggle -->
+        <button
+          type="button"
+          onclick={() => (autoRotate = !autoRotate)}
+          class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition {autoRotate ? 'border-primary/50 bg-primary/10 text-primary' : 'border-border bg-muted text-muted-foreground hover:text-foreground'}"
+          title="Ketika aktif, grid kamera otomatis beralih mengikuti giliran area juri setiap 150 detik"
+        >
+          <RefreshCw class="h-3 w-3 {autoRotate && roundStore.state === 'RUNNING' ? 'animate-spin' : ''}" />
+          <span class="hidden sm:inline">Auto-Rotasi</span>
+          <span class="rounded px-1 text-[9px] font-bold {autoRotate ? 'bg-primary text-primary-foreground' : 'bg-accent'}">
+            {autoRotate ? 'ON' : 'OFF'}
+          </span>
+        </button>
+
         {#if focusId}
           <Button
             variant="outline"
@@ -178,10 +205,15 @@
           <span
             class="h-2 w-2 rounded-full {roundStore.state === 'RUNNING' ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}"
           ></span>
-          <span class="font-mono text-xs font-black text-amber-700">
-            {roundStore.remainingSeconds}s
-          </span>
-          <span class="text-[10px] text-muted-foreground font-semibold uppercase">
+          <div class="flex flex-col text-right font-mono">
+            <span class="text-xs font-black text-amber-700 leading-none">
+              Area: {roundStore.shiftRemainingSeconds}s
+            </span>
+            <span class="text-[9px] text-muted-foreground leading-tight">
+              Shift {roundStore.currentShift}/4 · {Math.floor(roundStore.roundRemainingSeconds / 60)}:{String(roundStore.roundRemainingSeconds % 60).padStart(2, "0")}
+            </span>
+          </div>
+          <span class="rounded bg-accent px-1.5 py-0.5 text-[9px] text-foreground font-bold uppercase">
             {roundStore.sessionName}
           </span>
         </div>
@@ -191,6 +223,23 @@
           <span class="font-mono text-[10px] text-muted-foreground">6 KAMERA 3x2</span>
         </div>
       </div>
+    </div>
+  {/if}
+
+  <!-- Rotation Alert Sticky Banner -->
+  {#if roundStore.rotationAlert && roundStore.state === 'RUNNING'}
+    <div class="bg-red-600 px-4 py-2 text-white font-bold text-xs flex items-center justify-between shadow-md animate-pulse">
+      <div class="flex items-center gap-2">
+        <span class="text-base">🔔</span>
+        <span>WAKTU AREA 150 DETIK TELAH HABIS! Silakan berpindah ke area giliran berikutnya.</span>
+      </div>
+      <button
+        type="button"
+        onclick={() => (roundStore.rotationAlert = false)}
+        class="rounded bg-white/20 px-2 py-0.5 text-[10px] hover:bg-white/30"
+      >
+        Tutup
+      </button>
     </div>
   {/if}
 
