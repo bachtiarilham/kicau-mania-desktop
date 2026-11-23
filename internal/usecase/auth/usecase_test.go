@@ -29,14 +29,14 @@ func (m *mockCloud) Call(ctx context.Context, method, path string, body any, out
 func TestAuthUsecase_Login(t *testing.T) {
 	ctx := context.Background()
 
-	// 1. Role not allowed
+	// 1. Role not allowed (e.g. standard MEMBER / PESERTA)
 	mock := &mockCloud{
-		loginRes: map[string]any{"roles": []any{"JURI"}},
+		loginRes: map[string]any{"roles": []any{"MEMBER"}},
 	}
 	uc := authUC.New(mock)
 	_, err := uc.Login(ctx, "test@example.com", "pass")
 	if err == nil {
-		t.Fatal("expected error for non-admin/operator role, got nil")
+		t.Fatal("expected error for non-staff role, got nil")
 	}
 	if !mock.loggedOut {
 		t.Fatal("expected logout on rejected role")
@@ -53,6 +53,19 @@ func TestAuthUsecase_Login(t *testing.T) {
 	}
 	if profile == nil {
 		t.Fatal("expected profile, got nil")
+	}
+
+	// 3. Judge / Juri role allowed
+	mockJudge := &mockCloud{
+		loginRes: map[string]any{"roles": []any{"JUDGE"}},
+	}
+	ucJudge := authUC.New(mockJudge)
+	profileJudge, err := ucJudge.Login(ctx, "judge@example.com", "pass")
+	if err != nil {
+		t.Fatalf("expected judge success, got error: %v", err)
+	}
+	if profileJudge == nil {
+		t.Fatal("expected judge profile, got nil")
 	}
 
 	// 3. Cloud path whitelist test

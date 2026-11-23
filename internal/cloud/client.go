@@ -117,9 +117,10 @@ func (c *Client) raw(ctx context.Context, method, path string, body any, out any
 	return res, json.Unmarshal(env.Data, out)
 }
 func (c *Client) tokens(res *http.Response, v struct {
-	Access  string         `json:"access_token"`
-	Expires int            `json:"expires_in"`
-	User    map[string]any `json:"user"`
+	Access       string         `json:"access_token"`
+	RefreshToken string         `json:"refresh_token"`
+	Expires      int            `json:"expires_in"`
+	User         map[string]any `json:"user"`
 }) error {
 	if v.Access == "" || v.Expires < 1 {
 		return errors.New("Token cloud tidak valid")
@@ -134,6 +135,11 @@ func (c *Client) tokens(res *http.Response, v struct {
 			}
 		}
 	}
+	if !found && v.RefreshToken != "" {
+		c.session.Refresh = v.RefreshToken
+		c.session.Cookie = "kicau_refresh"
+		found = true
+	}
 	if !found {
 		return errors.New("Cloud tidak mengirim refresh cookie")
 	}
@@ -146,9 +152,10 @@ func (c *Client) refresh(ctx context.Context) error {
 		return &Failure{401, "Silakan login ke cloud"}
 	}
 	var v struct {
-		Access  string         `json:"access_token"`
-		Expires int            `json:"expires_in"`
-		User    map[string]any `json:"user"`
+		Access       string         `json:"access_token"`
+		RefreshToken string         `json:"refresh_token"`
+		Expires      int            `json:"expires_in"`
+		User         map[string]any `json:"user"`
 	}
 	r, e := c.raw(ctx, "POST", "/auth/refresh", map[string]any{}, &v)
 	if e != nil {
@@ -166,9 +173,10 @@ func (c *Client) Login(ctx context.Context, email, password string) (map[string]
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var v struct {
-		Access  string         `json:"access_token"`
-		Expires int            `json:"expires_in"`
-		User    map[string]any `json:"user"`
+		Access       string         `json:"access_token"`
+		RefreshToken string         `json:"refresh_token"`
+		Expires      int            `json:"expires_in"`
+		User         map[string]any `json:"user"`
 	}
 	r, e := c.raw(ctx, "POST", "/auth/login", map[string]any{"email": email, "password": password, "device_id": c.session.Device}, &v)
 	if e != nil {

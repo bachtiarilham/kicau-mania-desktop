@@ -25,21 +25,33 @@ func (u *usecase) Login(ctx context.Context, email, password string) (map[string
 		return nil, err
 	}
 	allowed := false
+	isRoleAllowed := func(role string) bool {
+		r := strings.ToUpper(role)
+		return r == "ADMIN" || r == "OPERATOR" || r == "JUDGE" || r == "JURI"
+	}
 	if roles, ok := profile["roles"].([]any); ok {
 		for _, role := range roles {
-			allowed = allowed || role == "ADMIN" || role == "OPERATOR"
+			if rStr, ok := role.(string); ok && isRoleAllowed(rStr) {
+				allowed = true
+				break
+			}
 		}
 	}
-	if roles, ok := profile["arena_roles"].([]any); ok {
-		for _, entry := range roles {
-			if role, ok := entry.(map[string]any); ok {
-				allowed = allowed || role["role"] == "ADMIN" || role["role"] == "OPERATOR"
+	if !allowed {
+		if roles, ok := profile["arena_roles"].([]any); ok {
+			for _, entry := range roles {
+				if roleMap, ok := entry.(map[string]any); ok {
+					if rStr, ok := roleMap["role"].(string); ok && isRoleAllowed(rStr) {
+						allowed = true
+						break
+					}
+				}
 			}
 		}
 	}
 	if !allowed {
 		_ = u.cloud.Logout(ctx)
-		return nil, errors.New("Akses cloud desktop memerlukan akun ADMIN atau OPERATOR")
+		return nil, errors.New("Akses cloud desktop memerlukan akun ADMIN, OPERATOR, atau JURI/JUDGE")
 	}
 	return profile, nil
 }

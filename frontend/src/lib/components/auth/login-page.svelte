@@ -50,16 +50,29 @@
     busy = true;
     error = "";
     try {
-      await api.login(email.trim(), password);
-      // Determine role from email
-      const cleanEmail = email.trim().toLowerCase();
-      if (cleanEmail.includes("juri")) {
-        auth.login("juri", email);
-      } else if (cleanEmail.includes("operator")) {
-        auth.login("operator", email);
-      } else {
-        auth.login("admin", email);
+      const profile = await api.login(email.trim(), password);
+      // Determine role from cloud profile
+      let role: UserRole = "operator";
+      const roles: string[] = Array.isArray(profile?.roles)
+        ? profile.roles.map((r: any) => String(r).toUpperCase())
+        : [];
+      const arenaRoles: string[] = Array.isArray(profile?.arena_roles)
+        ? profile.arena_roles.map((r: any) => String(r?.role || "").toUpperCase())
+        : [];
+      const allRoles = [...roles, ...arenaRoles];
+
+      if (allRoles.includes("ADMIN")) {
+        role = "admin";
+      } else if (allRoles.includes("OPERATOR")) {
+        role = "operator";
+      } else if (allRoles.includes("JUDGE") || allRoles.includes("JURI")) {
+        role = "juri";
+      } else if (email.toLowerCase().includes("juri")) {
+        role = "juri";
       }
+
+      const userName = profile?.name || profile?.nickname || "";
+      auth.login(role, profile?.email || email.trim(), userName);
     } catch (err: any) {
       // Local fallback for offline arena operational use
       const cleanEmail = email.trim().toLowerCase();
