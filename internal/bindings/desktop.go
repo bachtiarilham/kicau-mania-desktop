@@ -2,312 +2,75 @@ package bindings
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"strings"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"io"
-	"kicau.desktop/cctv/internal/cloud"
-	"kicau.desktop/cctv/internal/localapp"
+
+	"kicau.desktop/cctv/internal/container"
 	"kicau.desktop/cctv/internal/model"
 	"kicau.desktop/cctv/internal/player"
-	"kicau.desktop/cctv/internal/settings"
-	"net/url"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
+// Desktop is the Wails RPC Delivery Facade that exposes methods to the frontend.
+// It delegates all domain logic to the injected Clean Architecture usecases.
 type Desktop struct {
-	active  atomic.Bool
-	mu      sync.Mutex
-	config  model.Config
-	store   *settings.Store
-	engine  *localapp.Client
-	cloud   *cloud.Client
-	players *player.Manager
-	cancel  context.CancelFunc
-	app     *application.App
-	window  *application.WebviewWindow
-	ctx     context.Context
-
-	sessionMu     sync.Mutex
-	cachedSession struct {
-		State    string   `json:"state"`
-		Channels []string `json:"channels"`
-	}
-	cachedSessionAt time.Time
+	container *container.Container
+	app       *application.App
+	window    *application.WebviewWindow
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
+// New creates a new Desktop delivery facade with fully initialized dependencies.
 func New() (*Desktop, error) {
-	s, e := settings.New()
-	if e != nil {
-		return nil, e
+	c, err := container.New()
+	if err != nil {
+		return nil, err
 	}
-	cfg := settings.Default()
-	if err := s.Load("desktop.json", &cfg, false); err != nil && !os.IsNotExist(err) {
-		return nil, errors.New("Pengaturan desktop tidak dapat dibaca; periksa desktop.json pada LocalAppData")
-	}
-	if e = settings.Validate(cfg); e != nil {
-		return nil, e
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	return &Desktop{config: cfg, store: s, engine: localapp.New(cfg.LocalURL), cloud: cloud.New(cfg.CloudURL, s), ctx: ctx, cancel: cancel}, nil
+	return NewWithContainer(c), nil
 }
 
-// Attach is excluded from generated bindings because it is not an exported RPC.
+// NewWithContainer creates a Desktop facade using a provided container (for testing and DI).
+func NewWithContainer(c *container.Container) *Desktop {
+	return &Desktop{
+		container: c,
+		ctx:       c.Ctx,
+		cancel:    c.Cancel,
+	}
+}
+
+// attach binds the native window handle and event emitter to the player driver.
 func (d *Desktop) attach(a *application.App, w *application.WebviewWindow) {
 	d.app = a
 	d.window = w
-	d.players = player.New(d.config.VLC, func() uintptr { return uintptr(w.NativeWindow()) }, func(s model.PlayerStatus) { a.Event.Emit("player:status", s) })
-	d.players.LiveCacheMS = d.config.LiveCacheMS
-	go d.engine.Metrics(d.ctx, func(v any) { a.Event.Emit("engine:metric", v) })
+	d.container.AttachPlayer(
+		func() uintptr { return uintptr(w.NativeWindow()) },
+		func(s model.PlayerStatus) { a.Event.Emit("player:status", s) },
+	)
+	go d.container.EngineUC.SubscribeMetrics(d.ctx, func(v any) {
+		a.Event.Emit("engine:metric", v)
+	})
 }
-func (d *Desktop) GetConfig() model.Config { d.mu.Lock(); defer d.mu.Unlock(); return d.config }
 
-// SaveConfig applies at next launch, preserving active engine sessions.
+// --- Config Domain ---
+
+func (d *Desktop) GetConfig() model.Config {
+	return d.container.ConfigUC.GetConfig()
+}
+
 func (d *Desktop) SaveConfig(cfg model.Config) error {
-	if e := settings.Validate(cfg); e != nil {
-		return e
-	}
-	return d.store.Save("desktop.json", cfg, false)
+	return d.container.ConfigUC.SaveConfig(cfg)
 }
-func (d *Desktop) Bootstrap() (map[string]any, error) { return d.engine.Bootstrap(d.ctx) }
-func (d *Desktop) Engine(method, path string, body map[string]any) (any, error) {
-	if !strings.HasPrefix(path, "/api/v1/") || strings.Contains(path, "bootstrap") || strings.Contains(path, "/file") {
-		return nil, errors.New("Endpoint engine tidak diizinkan")
-	}
-	allowed := false
-	for _, p := range []string{"setup/", "media/sessions", "channels", "recordings", "desktop/", "local/status"} {
-		allowed = allowed || strings.HasPrefix(strings.TrimPrefix(path, "/api/v1/"), p)
-	}
-	if !allowed || !(method == "GET" || method == "POST" || method == "DELETE") {
-		return nil, errors.New("Operasi engine tidak diizinkan")
-	}
-	var out any
-	e := d.engine.Call(d.ctx, method, path, body, &out)
-	if e == nil && path == "/api/v1/local/status" {
-		if status, ok := out.(map[string]any); ok {
-			if status["session"] == nil {
-				d.active.Store(false)
-			} else if session, ok := status["session"].(map[string]any); ok {
-				switch session["state"] {
-				case "STARTING", "RUNNING", "DEGRADED", "STOPPING", "FINALIZING":
-					d.active.Store(true)
-				case "STOPPED", "INTERRUPTED", "FAILED":
-					d.active.Store(false)
-				}
-			}
-		}
-	}
-	if e == nil && strings.HasPrefix(path, "/api/v1/media/sessions") {
-		if r, ok := out.(map[string]any); ok {
-			state, _ := r["state"].(string)
-			if state != "" {
-				d.active.Store(state != "STOPPED" && state != "INTERRUPTED" && state != "FAILED")
-			}
-		} else if out == nil {
-			d.active.Store(false)
-		}
-	}
-	return out, e
-}
-func (d *Desktop) Login(email, password string) (map[string]any, error) {
-	profile, e := d.cloud.Login(d.ctx, email, password)
-	if e != nil {
-		return nil, e
-	}
-	allowed := false
-	if roles, ok := profile["roles"].([]any); ok {
-		for _, role := range roles {
-			allowed = allowed || role == "ADMIN" || role == "OPERATOR"
-		}
-	}
-	if roles, ok := profile["arena_roles"].([]any); ok {
-		for _, entry := range roles {
-			if role, ok := entry.(map[string]any); ok {
-				allowed = allowed || role["role"] == "ADMIN" || role["role"] == "OPERATOR"
-			}
-		}
-	}
-	if !allowed {
-		_ = d.cloud.Logout(d.ctx)
-		return nil, errors.New("Akses cloud desktop memerlukan akun ADMIN atau OPERATOR")
-	}
-	return profile, nil
-}
-func (d *Desktop) Logout() error { return d.cloud.Logout(d.ctx) }
-func (d *Desktop) Cloud(path string) (any, error) {
-	allowed := false
-	for _, p := range []string{"/auth/me", "/arenas", "/registrations", "/media/recordings"} {
-		allowed = allowed || strings.HasPrefix(path, p)
-	}
-	if !allowed {
-		return nil, errors.New("Endpoint cloud tidak diizinkan")
-	}
-	var out any
-	e := d.cloud.Call(d.ctx, "GET", path, nil, &out)
-	return out, e
-}
-func (d *Desktop) Pair(arena string) (any, error) {
-	id := cloud.ID()
-	var current map[string]any
-	if e := d.engine.Call(d.ctx, "GET", "/api/v1/desktop/cloud", nil, &current); e != nil {
-		return nil, e
-	}
-	if current["paired"] == true {
-		if current["arena_id"] != arena {
-			return nil, errors.New("Engine ini sudah dipasangkan ke arena lain. Gunakan engine terpisah agar antrean lama tetap aman.")
-		}
-		if existing, ok := current["engine_id"].(string); ok && existing != "" {
-			id = existing
-		}
-	}
-	var paired struct {
-		ID    string `json:"id"`
-		Arena string `json:"arena_id"`
-		Token string `json:"token"`
-	}
-	if e := d.cloud.Call(d.ctx, "POST", "/media/engines/"+id, map[string]any{"arena_id": arena}, &paired); e != nil {
-		return nil, e
-	}
-	e := d.engine.Call(d.ctx, "POST", "/api/v1/desktop/cloud", map[string]any{"base_url": d.config.CloudURL, "engine_id": paired.ID, "arena_id": paired.Arena, "token": paired.Token}, nil)
-	if e != nil {
-		_ = d.cloud.Call(d.ctx, "DELETE", "/media/engines/"+id, nil, nil)
-		return nil, e
-	}
-	return map[string]any{"engine_id": paired.ID, "arena_id": paired.Arena}, nil
-}
-func (d *Desktop) Revoke(engine string) error {
-	return d.cloud.Call(d.ctx, "DELETE", "/media/engines/"+engine, nil, nil)
-}
-func (d *Desktop) BindSession(in map[string]any) (any, error) {
-	var out map[string]any
-	if e := d.cloud.Call(d.ctx, "POST", "/media/ingestions", in, &out); e != nil {
-		return nil, e
-	}
-	out["session_id"] = in["session_id"]
-	if e := d.engine.Call(d.ctx, "POST", "/api/v1/desktop/mappings", out, nil); e != nil {
-		return nil, e
-	}
-	var existing any
-	out["existing_session"] = d.engine.Call(d.ctx, "GET", "/api/v1/media/sessions/"+url.PathEscape(in["session_id"].(string)), nil, &existing) == nil
-	return out, nil
-}
-func (d *Desktop) NewSessionID() string { return cloud.ID() }
-func (d *Desktop) SyncPlayer(id string, r model.Rect) error {
-	return d.SyncPlayerWithZoom(id, r, 100)
-}
-func (d *Desktop) SyncZoomPlayer(id string, r model.Rect) error {
-	return d.SyncPlayerWithZoom(id, r, 200)
-}
-func (d *Desktop) SyncPlayerWithZoom(id string, r model.Rect, zoom int) error {
-	if zoom < 100 || zoom > 300 {
-		return errors.New("Zoom harus antara 100% dan 300%")
-	}
-	if !player.ValidID(id) {
-		return errors.New("ID kamera tidak valid")
-	}
 
-	d.sessionMu.Lock()
-	session := d.cachedSession
-	cached := time.Since(d.cachedSessionAt) < 1500*time.Millisecond
-	d.sessionMu.Unlock()
-
-	if !cached {
-		var fetched struct {
-			State    string   `json:"state"`
-			Channels []string `json:"channels"`
-		}
-		if e := d.engine.Call(d.ctx, "GET", "/api/v1/media/sessions/current", nil, &fetched); e == nil {
-			d.sessionMu.Lock()
-			d.cachedSession = fetched
-			d.cachedSessionAt = time.Now()
-			session = fetched
-			d.sessionMu.Unlock()
-		}
-	}
-
-	if (session.State == "RUNNING" || session.State == "DEGRADED") && len(session.Channels) > 0 {
-		found := false
-		for _, v := range session.Channels {
-			found = found || v == id
-		}
-		if !found {
-			return errors.New("Kamera bukan bagian sesi aktif")
-		}
-	}
-
-	source := strings.TrimRight(d.config.RTSPBase, "/") + "/" + id
-	return d.players.SyncWithZoom(id, source, "", r, zoom)
+func (d *Desktop) Preferences() string {
+	return d.container.ConfigUC.Preferences()
 }
-func (d *Desktop) StopPlayer(id string)             { d.players.Stop(id) }
-func (d *Desktop) HidePlayers()                     { d.players.Hide() }
-func (d *Desktop) Mute(id string, muted bool) error { return d.players.Mute(id, muted) }
-func (d *Desktop) PlayRecording(id string, r model.Rect) error {
-	if !player.ValidID(id) {
-		return errors.New("ID rekaman tidak valid")
-	}
-	return d.players.Sync("recording-"+id, d.config.LocalURL+"/api/v1/recordings/"+id+"/file", "X-Local-Control: "+d.engine.Nonce(), r)
-}
-func (d *Desktop) ExportRecording(id string, suggestedFilename string) (string, error) {
-	if !player.ValidID(id) {
-		return "", errors.New("ID rekaman tidak valid")
-	}
-	res, e := d.engine.File(d.ctx, id)
-	if e != nil {
-		return "", e
-	}
-	defer res.Body.Close()
-	ext, label := ".mkv", "Video MKV"
-	d.HidePlayers()
-	filename := id + ext
-	if suggestedFilename != "" {
-		filename = suggestedFilename
-		if !strings.HasSuffix(strings.ToLower(filename), ext) {
-			filename += ext
-		}
-	}
-	dlg := d.app.Dialog.SaveFile().SetFilename(filename).AddFilter(label, "*"+ext).AttachToWindow(d.window)
-	d.mu.Lock()
-	if d.config.RecordingsDir != "" {
-		dlg.SetDirectory(d.config.RecordingsDir)
-	}
-	d.mu.Unlock()
-	dest, e := dlg.PromptForSingleSelection()
-	if e != nil || dest == "" {
-		return "", e
-	}
-	dir := filepath.Dir(dest)
-	d.mu.Lock()
-	d.config.RecordingsDir = dir
-	_ = d.store.Save("desktop.json", d.config, false)
-	d.mu.Unlock()
 
-	f, e := os.CreateTemp(dir, ".export-*"+ext)
-	if e != nil {
-		return "", e
-	}
-	defer os.Remove(f.Name())
-	_, e = io.Copy(f, res.Body)
-	if e == nil {
-		e = f.Sync()
-	}
-	ce := f.Close()
-	if e == nil {
-		e = ce
-	}
-	if e != nil {
-		return "", e
-	}
-	if e = os.Rename(f.Name(), dest); e != nil {
-		return "", e
-	}
-	return dest, nil
+func (d *Desktop) OpenRecordingsFolder() error {
+	return d.container.ConfigUC.OpenRecordingsFolder()
 }
+
 func (d *Desktop) SelectRecordingsFolder() (string, error) {
 	d.HidePlayers()
 	dlg := d.app.Dialog.OpenFile().
@@ -315,9 +78,8 @@ func (d *Desktop) SelectRecordingsFolder() (string, error) {
 		CanChooseFiles(false).
 		SetTitle("Pilih Folder Penyimpanan Rekaman Video").
 		AttachToWindow(d.window)
-	d.mu.Lock()
-	cur := d.config.RecordingsDir
-	d.mu.Unlock()
+
+	cur := d.container.ConfigUC.GetRecordingsDir()
 	if cur != "" {
 		dlg.SetDirectory(cur)
 	}
@@ -325,140 +87,136 @@ func (d *Desktop) SelectRecordingsFolder() (string, error) {
 	if err != nil || dir == "" {
 		return cur, err
 	}
-	d.mu.Lock()
-	d.config.RecordingsDir = dir
-	_ = d.store.Save("desktop.json", d.config, false)
-	d.mu.Unlock()
+	_ = d.container.ConfigUC.SetRecordingsDir(dir)
 	return dir, nil
 }
-func (d *Desktop) OpenRecordingsFolder() error {
-	d.mu.Lock()
-	dir := d.config.RecordingsDir
-	d.mu.Unlock()
-	if dir == "" {
-		dir = filepath.Join(os.Getenv("USERPROFILE"), "Videos", "KicauMania")
-		if os.Getenv("USERPROFILE") == "" {
-			exe, _ := os.Executable()
-			dir = filepath.Join(filepath.Dir(exe), "recordings")
-		}
-	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-	return exec.Command("explorer.exe", dir).Start()
+
+// --- Auth Domain ---
+
+func (d *Desktop) Login(email, password string) (map[string]any, error) {
+	return d.container.AuthUC.Login(d.ctx, email, password)
 }
 
-func sanitizeFilename(name string) string {
-	r := strings.NewReplacer("/", "_", "\\", "_", ":", "_", "*", "_", "?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
-	return r.Replace(strings.TrimSpace(name))
+func (d *Desktop) Logout() error {
+	return d.container.AuthUC.Logout(d.ctx)
+}
+
+func (d *Desktop) Cloud(path string) (any, error) {
+	return d.container.AuthUC.Cloud(d.ctx, path)
+}
+
+func (d *Desktop) Revoke(engineID string) error {
+	return d.container.AuthUC.Revoke(d.ctx, engineID)
+}
+
+// --- Engine Domain ---
+
+func (d *Desktop) Bootstrap() (map[string]any, error) {
+	return d.container.EngineUC.Bootstrap(d.ctx)
+}
+
+func (d *Desktop) Engine(method, path string, body map[string]any) (any, error) {
+	return d.container.EngineUC.Engine(d.ctx, method, path, body)
+}
+
+func (d *Desktop) Pair(arena string) (any, error) {
+	return d.container.EngineUC.Pair(d.ctx, arena)
+}
+
+func (d *Desktop) BindSession(in map[string]any) (any, error) {
+	return d.container.EngineUC.BindSession(d.ctx, in)
+}
+
+func (d *Desktop) NewSessionID() string {
+	return d.container.EngineUC.NewSessionID()
+}
+
+func (d *Desktop) LocalRecordings(cursor string) (any, error) {
+	return d.container.EngineUC.LocalRecordings(d.ctx, cursor)
+}
+
+func (d *Desktop) IsActive() bool {
+	return d.container.EngineUC.IsActive()
+}
+
+func (d *Desktop) SetActive(active bool) {
+	d.container.EngineUC.SetActive(active)
+}
+
+// --- Media & Player Domain ---
+
+func (d *Desktop) SyncPlayer(id string, r model.Rect) error {
+	return d.SyncPlayerWithZoom(id, r, 100)
+}
+
+func (d *Desktop) SyncZoomPlayer(id string, r model.Rect) error {
+	return d.SyncPlayerWithZoom(id, r, 200)
+}
+
+func (d *Desktop) SyncPlayerWithZoom(id string, r model.Rect, zoom int) error {
+	if d.container.PlayerUC == nil {
+		return errors.New("Player belum siap")
+	}
+	return d.container.PlayerUC.SyncPlayerWithZoom(d.ctx, id, r, zoom)
+}
+
+func (d *Desktop) StopPlayer(id string) {
+	if d.container.PlayerUC != nil {
+		d.container.PlayerUC.StopPlayer(id)
+	}
+}
+
+func (d *Desktop) HidePlayers() {
+	if d.container.PlayerUC != nil {
+		d.container.PlayerUC.HidePlayers()
+	}
+}
+
+func (d *Desktop) Mute(id string, muted bool) error {
+	if d.container.PlayerUC == nil {
+		return nil
+	}
+	return d.container.PlayerUC.Mute(id, muted)
+}
+
+func (d *Desktop) PlayRecording(id string, r model.Rect) error {
+	if d.container.PlayerUC == nil {
+		return errors.New("Player belum siap")
+	}
+	return d.container.PlayerUC.PlayRecording(id, r)
+}
+
+// --- Recording Domain ---
+
+func (d *Desktop) ExportRecording(id string, suggestedFilename string) (string, error) {
+	if !player.ValidID(id) {
+		return "", errors.New("ID rekaman tidak valid")
+	}
+	ext, label := ".mkv", "Video MKV"
+	d.HidePlayers()
+
+	filename := id + ext
+	if suggestedFilename != "" {
+		filename = suggestedFilename
+		if !strings.HasSuffix(strings.ToLower(filename), ext) {
+			filename += ext
+		}
+	}
+
+	dlg := d.app.Dialog.SaveFile().SetFilename(filename).AddFilter(label, "*"+ext).AttachToWindow(d.window)
+	cur := d.container.ConfigUC.GetRecordingsDir()
+	if cur != "" {
+		dlg.SetDirectory(cur)
+	}
+
+	dest, err := dlg.PromptForSingleSelection()
+	if err != nil || dest == "" {
+		return "", err
+	}
+
+	return d.container.RecordingUC.ExportRecording(d.ctx, id, filename, dest)
 }
 
 func (d *Desktop) SaveSessionRecordings(sessionID, sessionName, targetDir, format string) ([]string, error) {
-	if sessionID == "" {
-		return nil, errors.New("ID sesi tidak boleh kosong")
-	}
-	if targetDir == "" {
-		d.mu.Lock()
-		targetDir = d.config.RecordingsDir
-		d.mu.Unlock()
-	}
-	if targetDir == "" {
-		targetDir = filepath.Join(os.Getenv("USERPROFILE"), "Videos", "KicauMania")
-		if os.Getenv("USERPROFILE") == "" {
-			exe, _ := os.Executable()
-			targetDir = filepath.Join(filepath.Dir(exe), "recordings")
-		}
-	}
-
-	d.mu.Lock()
-	d.config.RecordingsDir = targetDir
-	_ = d.store.Save("desktop.json", d.config, false)
-	d.mu.Unlock()
-
-	if sessionName == "" {
-		sessionName = sessionID
-	}
-	safeSessionName := sanitizeFilename(sessionName)
-	sessionFolder := filepath.Join(targetDir, safeSessionName)
-	if err := os.MkdirAll(sessionFolder, 0755); err != nil {
-		return nil, err
-	}
-
-	type recItem struct {
-		ID        string `json:"id"`
-		ChannelID string `json:"channel_id"`
-		State     string `json:"state"`
-	}
-	var readyItems []recItem
-
-	// Poll up to 15 times (30 seconds) waiting for recordings to be ready
-	for attempt := 0; attempt < 15; attempt++ {
-		var page struct {
-			Items []recItem `json:"items"`
-		}
-		err := d.engine.Call(d.ctx, "GET", "/api/v1/recordings?limit=50&session_id="+url.QueryEscape(sessionID), nil, &page)
-		if err == nil && len(page.Items) > 0 {
-			allReady := true
-			for _, it := range page.Items {
-				if it.State != "READY" && it.State != "UPLOADED" {
-					allReady = false
-					break
-				}
-			}
-			if allReady {
-				readyItems = page.Items
-				break
-			}
-			readyItems = page.Items
-		}
-		time.Sleep(2 * time.Second)
-	}
-
-	if len(readyItems) == 0 {
-		return nil, errors.New("Tidak ada rekaman yang siap untuk sesi ini")
-	}
-
-	var savedFiles []string
-	ext := ".mkv"
-	if strings.ToLower(format) == "mp4" {
-		ext = ".mp4"
-	}
-
-	for _, item := range readyItems {
-		if item.ID == "" {
-			continue
-		}
-		chName := item.ChannelID
-		if chName == "" {
-			chName = item.ID
-		}
-		destFile := filepath.Join(sessionFolder, chName+ext)
-
-		res, err := d.engine.File(d.ctx, item.ID)
-		if err != nil {
-			continue
-		}
-
-		tmpFile := destFile + ".part"
-		f, err := os.Create(tmpFile)
-		if err != nil {
-			res.Body.Close()
-			continue
-		}
-		_, copyErr := io.Copy(f, res.Body)
-		f.Close()
-		res.Body.Close()
-		if copyErr != nil {
-			os.Remove(tmpFile)
-			continue
-		}
-		_ = os.Rename(tmpFile, destFile)
-		savedFiles = append(savedFiles, destFile)
-	}
-
-	return savedFiles, nil
-}
-func (d *Desktop) Preferences() string { b, _ := json.Marshal(d.config); return string(b) }
-func (d *Desktop) LocalRecordings(cursor string) (any, error) {
-	return d.Engine("GET", "/api/v1/recordings?limit=25&cursor="+url.QueryEscape(cursor), nil)
+	return d.container.RecordingUC.SaveSessionRecordings(d.ctx, sessionID, sessionName, targetDir, format)
 }

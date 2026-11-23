@@ -1,13 +1,34 @@
-package bindings
+package bindings_test
 
 import (
 	"context"
 	"encoding/json"
-	"kicau.desktop/cctv/internal/localapp"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"kicau.desktop/cctv/internal/bindings"
+	"kicau.desktop/cctv/internal/container"
+	"kicau.desktop/cctv/internal/localapp"
+	"kicau.desktop/cctv/internal/model"
+	configUC "kicau.desktop/cctv/internal/usecase/config"
+	engineUC "kicau.desktop/cctv/internal/usecase/engine"
 )
+
+type mockStore struct{}
+
+func (m *mockStore) Load(name string, v any, secret bool) error { return nil }
+func (m *mockStore) Save(name string, v any, secret bool) error { return nil }
+
+type mockCloud struct{}
+
+func (m *mockCloud) Login(ctx context.Context, email, password string) (map[string]any, error) {
+	return nil, nil
+}
+func (m *mockCloud) Logout(ctx context.Context) error { return nil }
+func (m *mockCloud) Call(ctx context.Context, method, path string, body any, out any) error {
+	return nil
+}
 
 func TestSessionSnapshotClearsNativeStaleActivity(t *testing.T) {
 	var session any
@@ -15,26 +36,41 @@ func TestSessionSnapshotClearsNativeStaleActivity(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"configured": true, "session": session}})
 	}))
 	defer server.Close()
-	d := &Desktop{ctx: context.Background(), engine: localapp.New(server.URL)}
-	d.active.Store(true)
+
+	ctx := context.Background()
+	engineClient := localapp.New(server.URL)
+	cfg := model.Config{}
+	cfgUCase := configUC.New(cfg, &mockStore{})
+	engineUCase := engineUC.New(engineClient, &mockCloud{}, cfgUCase)
+
+	c := &container.Container{
+		Engine:   engineClient,
+		EngineUC: engineUCase,
+		ConfigUC: cfgUCase,
+		Ctx:      ctx,
+		Cancel:   func() {},
+	}
+	d := bindings.NewWithContainer(c)
+	d.SetActive(true)
+
 	if _, e := d.Engine("GET", "/api/v1/local/status", nil); e != nil {
 		t.Fatal(e)
 	}
-	if d.active.Load() {
+	if d.IsActive() {
 		t.Fatal("empty snapshot retained active session")
 	}
 	session = map[string]any{"id": "one", "state": "FINALIZING"}
 	if _, e := d.Engine("GET", "/api/v1/local/status", nil); e != nil {
 		t.Fatal(e)
 	}
-	if !d.active.Load() {
+	if !d.IsActive() {
 		t.Fatal("genuine finalization lost")
 	}
 	session = map[string]any{"id": "one", "state": "STOPPED"}
 	if _, e := d.Engine("GET", "/api/v1/local/status", nil); e != nil {
 		t.Fatal(e)
 	}
-	if d.active.Load() {
+	if d.IsActive() {
 		t.Fatal("terminal snapshot retained active session")
 	}
 }

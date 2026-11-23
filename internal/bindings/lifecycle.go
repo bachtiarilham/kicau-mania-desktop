@@ -11,7 +11,7 @@ import (
 func Wire(d *Desktop, a *application.App, w *application.WebviewWindow) {
 	d.attach(a, w)
 	w.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
-		if d.active.Load() {
+		if d.IsActive() {
 			text, _ := windows.UTF16PtrFromString("Tutup desktop? Rekaman dan upload tetap berjalan di local-app.")
 			title, _ := windows.UTF16PtrFromString("Sesi media masih aktif")
 			proc := windows.NewLazySystemDLL("user32.dll").NewProc("MessageBoxW")
@@ -23,8 +23,8 @@ func Wire(d *Desktop, a *application.App, w *application.WebviewWindow) {
 	})
 	a.OnShutdown(func() {
 		d.cancel()
-		if d.players != nil {
-			d.players.Shutdown()
+		if d.container != nil && d.container.PlayerUC != nil {
+			d.container.PlayerUC.Shutdown()
 		}
 	})
 }
