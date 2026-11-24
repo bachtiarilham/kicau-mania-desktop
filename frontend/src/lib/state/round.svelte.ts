@@ -1,6 +1,17 @@
 import { engine } from "./engine.svelte";
 import { api } from "$lib/services/api";
 
+export interface ParticipantMapping {
+  registrationId: string;
+  gantanganId: string;
+  gantanganNumber: number;
+  birdName: string;
+  birdCode?: string;
+  ownerName: string;
+  ownerPhone?: string;
+  channelId?: string;
+}
+
 export interface RoundConfig {
   eventName: string;
   sessionName: string;
@@ -10,6 +21,9 @@ export interface RoundConfig {
   totalDurationSeconds?: number;
   shiftDurationSeconds?: number;
   durationSeconds?: number;
+  eventId?: string;
+  roundId?: string;
+  participants?: ParticipantMapping[];
 }
 
 export type RoundState = "IDLE" | "RUNNING" | "PAUSED" | "FINISHED";
@@ -37,6 +51,10 @@ class RoundStore {
     "Juri 3: Zffgfg Hnnn",
     "Juri 4: Ijdjff Jndd",
   ]);
+
+  eventId = $state("");
+  roundId = $state("");
+  participants = $state<ParticipantMapping[]>([]);
 
   // Round is 10 minutes (600 seconds) divided into 4 shifts of 150 seconds each
   totalDurationSeconds = $state(600);
@@ -96,6 +114,9 @@ class RoundStore {
         startTime: this.startTime,
         endTime: this.endTime,
         jurors: this.jurors,
+        eventId: this.eventId,
+        roundId: this.roundId,
+        participants: this.participants,
         totalDurationSeconds: this.totalDurationSeconds,
         shiftDurationSeconds: this.shiftDurationSeconds,
         roundRemainingSeconds: this.roundRemainingSeconds,
@@ -117,6 +138,9 @@ class RoundStore {
     this.startTime = payload.startTime ?? this.startTime;
     this.endTime = payload.endTime ?? this.endTime;
     this.jurors = Array.isArray(payload.jurors) ? payload.jurors : this.jurors;
+    this.eventId = payload.eventId ?? this.eventId;
+    this.roundId = payload.roundId ?? this.roundId;
+    this.participants = Array.isArray(payload.participants) ? payload.participants : this.participants;
     this.totalDurationSeconds = payload.totalDurationSeconds ?? this.totalDurationSeconds;
     this.shiftDurationSeconds = payload.shiftDurationSeconds ?? this.shiftDurationSeconds;
     this.roundRemainingSeconds = payload.roundRemainingSeconds ?? this.roundRemainingSeconds;
@@ -147,6 +171,9 @@ class RoundStore {
           startTime: this.startTime,
           endTime: this.endTime,
           jurors: this.jurors,
+          eventId: this.eventId,
+          roundId: this.roundId,
+          participants: this.participants,
           totalDurationSeconds: this.totalDurationSeconds,
           shiftDurationSeconds: this.shiftDurationSeconds,
         })
@@ -167,6 +194,9 @@ class RoundStore {
         if (parsed.startTime) this.startTime = parsed.startTime;
         if (parsed.endTime) this.endTime = parsed.endTime;
         if (Array.isArray(parsed.jurors)) this.jurors = parsed.jurors;
+        if (parsed.eventId) this.eventId = parsed.eventId;
+        if (parsed.roundId) this.roundId = parsed.roundId;
+        if (Array.isArray(parsed.participants)) this.participants = parsed.participants;
         if (typeof parsed.totalDurationSeconds === "number") {
           this.totalDurationSeconds = parsed.totalDurationSeconds;
           this.roundRemainingSeconds = parsed.totalDurationSeconds;
@@ -179,6 +209,36 @@ class RoundStore {
     } catch {
       // Ignore storage parse error
     }
+  }
+
+  setCloudRound(config: {
+    eventId: string;
+    roundId: string;
+    eventName: string;
+    sessionName: string;
+    startTime: string;
+    endTime: string;
+    jurors: string[];
+    participants?: ParticipantMapping[];
+  }) {
+    this.eventId = config.eventId;
+    this.roundId = config.roundId;
+    this.eventName = config.eventName;
+    this.sessionName = config.sessionName;
+    this.startTime = config.startTime;
+    this.endTime = config.endTime;
+    if (config.jurors && config.jurors.length > 0) {
+      this.jurors = [...config.jurors];
+    }
+    if (config.participants) {
+      this.participants = [...config.participants];
+    }
+    this.saveToStorage();
+    this.broadcast();
+  }
+
+  getParticipantByGantangan(num: number): ParticipantMapping | undefined {
+    return this.participants.find((p) => p.gantanganNumber === num);
   }
 
   updateConfig(config: Partial<RoundConfig>) {

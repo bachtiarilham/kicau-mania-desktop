@@ -7,6 +7,7 @@ class AuthStore {
   role = $state<UserRole | null>(null);
   userEmail = $state("");
   userName = $state("");
+  arenaId = $state("");
   judgeIndex = $state(0); // 0 = Juri 1, 1 = Juri 2, 2 = Juri 3, 3 = Juri 4
 
   constructor() {
@@ -24,6 +25,7 @@ class AuthStore {
           this.role = parsed.role;
           this.userEmail = parsed.userEmail || "";
           this.userName = parsed.userName || "";
+          this.arenaId = parsed.arenaId || "";
           if (typeof parsed.judgeIndex === "number") {
             this.judgeIndex = parsed.judgeIndex;
           }
@@ -44,6 +46,7 @@ class AuthStore {
           role: this.role,
           userEmail: this.userEmail,
           userName: this.userName,
+          arenaId: this.arenaId,
           judgeIndex: this.judgeIndex,
         })
       );
@@ -57,11 +60,19 @@ class AuthStore {
     this.saveToStorage();
   }
 
-  login(role: UserRole, email?: string, name?: string, judgeIdx?: number) {
+  setArenaId(id: string) {
+    this.arenaId = id;
+    this.saveToStorage();
+  }
+
+  login(role: UserRole, email?: string, name?: string, judgeIdx?: number, arenaId?: string) {
     this.isLoggedIn = true;
     this.role = role;
     this.userEmail = email || (role === "juri" ? "juri@kicaumania.com" : role === "operator" ? "operator@kicaumania.com" : "admin@kicaumania.com");
     this.userName = name || (role === "juri" ? "Dewan Juri Arena" : role === "operator" ? "Operator Arena" : "Administrator");
+    if (arenaId) {
+      this.arenaId = arenaId;
+    }
 
     if (typeof judgeIdx === "number") {
       this.judgeIndex = Math.max(0, Math.min(3, judgeIdx));

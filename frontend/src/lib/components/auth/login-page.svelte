@@ -72,7 +72,8 @@
       }
 
       const userName = profile?.name || profile?.nickname || "";
-      auth.login(role, profile?.email || email.trim(), userName);
+      const arenaId = profile?.arena_roles?.[0]?.arena_id || profile?.arena_id || "";
+      auth.login(role, profile?.email || email.trim(), userName, undefined, arenaId);
     } catch (err: any) {
       // Local fallback for offline arena operational use
       const cleanEmail = email.trim().toLowerCase();

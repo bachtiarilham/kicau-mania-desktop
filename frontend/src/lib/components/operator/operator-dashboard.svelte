@@ -13,6 +13,7 @@
     Maximize2,
     Minimize2,
     Settings,
+    Cloud,
     Radio,
     ShieldAlert,
     CheckCircle2,
@@ -21,6 +22,7 @@
   } from "@lucide/svelte";
   import * as Dialog from "$lib/components/ui/alert-dialog";
   import RoundTimeUpDialog from "../sessions/round-timeup-dialog.svelte";
+  import CloudSessionSelector from "../sessions/cloud-session-selector.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
@@ -36,6 +38,7 @@
   let selectedFilter = $state<"all" | "A" | "B" | "C" | "D">("all");
   let spotlightId = $state<string | null>(null);
   let showEditModal = $state(false);
+  let showCloudModal = $state(false);
   let openingEditModal = $state(false);
   let disposed = false;
   let audibleId = $state<string | null>(null);
@@ -132,9 +135,26 @@
     engine.overlay = false;
   }
 
+  async function openCloudModal() {
+    if (openingEditModal || showEditModal || showCloudModal) return;
+    engine.overlay = true;
+    try {
+      await api.hidePlayers();
+    } catch {
+      // Player geometry hides native windows while overlay is active
+    } finally {
+      if (!disposed) showCloudModal = true;
+    }
+  }
+
+  function closeCloudModal() {
+    showCloudModal = false;
+    engine.overlay = false;
+  }
+
   onDestroy(() => {
     disposed = true;
-    if (showEditModal || openingEditModal) engine.overlay = false;
+    if (showEditModal || openingEditModal || showCloudModal) engine.overlay = false;
   });
 
   function saveConfig() {
@@ -234,6 +254,26 @@
             <span class="text-muted-foreground">{roundStore.startTime}</span> – <span class="text-foreground">{roundStore.endTime}</span>
           </div>
         </div>
+
+        <Button
+          size="sm"
+          onclick={openCloudModal}
+          class="h-7 gap-1.5 bg-primary/20 text-primary border border-primary/40 text-xs font-bold hover:bg-primary/30"
+          title="Tarik event & jadwal ronde dari database cloud"
+        >
+          <Cloud class="h-3 w-3" />
+          <span>Pilih Sesi Cloud</span>
+        </Button>
+
+        {#if roundStore.roundId}
+          <span
+            class="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full"
+            title="Sesi aktif tersinkron dengan cloud database"
+          >
+            <CheckCircle2 class="h-2.5 w-2.5" />
+            <span>Cloud Sync</span>
+          </span>
+        {/if}
 
         <Button
           variant="outline"
@@ -437,9 +477,16 @@
                 >
                   {stream.code}
                 </span>
-                <span class="truncate text-[11px] font-semibold text-foreground">
-                  {stream.category}
-                </span>
+                {#if roundStore.getParticipantByGantangan(stream.gantanganNumber)}
+                  {@const part = roundStore.getParticipantByGantangan(stream.gantanganNumber)}
+                  <span class="truncate text-[11px] font-semibold text-foreground" title="{part?.birdName} ({part?.ownerName})">
+                    {part?.birdName} <span class="text-muted-foreground font-normal">({part?.ownerName})</span>
+                  </span>
+                {:else}
+                  <span class="truncate text-[11px] font-semibold text-foreground">
+                    {stream.category}
+                  </span>
+                {/if}
               </div>
 
               <div class="flex shrink-0 items-center gap-1">
@@ -521,9 +568,16 @@
                 >
                   {stream.code}
                 </span>
-                <span class="truncate text-[11px] font-semibold text-foreground">
-                  {stream.category}
-                </span>
+                {#if roundStore.getParticipantByGantangan(stream.gantanganNumber)}
+                  {@const part = roundStore.getParticipantByGantangan(stream.gantanganNumber)}
+                  <span class="truncate text-[11px] font-semibold text-foreground" title="{part?.birdName} ({part?.ownerName})">
+                    {part?.birdName} <span class="text-muted-foreground font-normal">({part?.ownerName})</span>
+                  </span>
+                {:else}
+                  <span class="truncate text-[11px] font-semibold text-foreground">
+                    {stream.category}
+                  </span>
+                {/if}
               </div>
 
               <div class="flex shrink-0 items-center gap-1">
@@ -784,3 +838,5 @@
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
+
+<CloudSessionSelector open={showCloudModal} onClose={closeCloudModal} />
