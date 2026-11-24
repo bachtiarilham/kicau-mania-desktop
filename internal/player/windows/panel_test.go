@@ -6,7 +6,7 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
-	"kicau.desktop/cctv/internal/model"
+	"kicau.desktop/cctv/internal/player/model"
 )
 
 func TestNativeRegionStaysInsidePane(t *testing.T) {

@@ -2,7 +2,7 @@ package vlc
 
 import (
 	"golang.org/x/sys/windows"
-	"kicau.desktop/cctv/internal/model"
+	"kicau.desktop/cctv/internal/player/model"
 	native "kicau.desktop/cctv/internal/player/windows"
 	"os"
 	"runtime"

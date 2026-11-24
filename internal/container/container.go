@@ -5,53 +5,58 @@ import (
 	"errors"
 	"os"
 
-	"kicau.desktop/cctv/internal/cloud"
-	"kicau.desktop/cctv/internal/domain"
-	"kicau.desktop/cctv/internal/localapp"
-	"kicau.desktop/cctv/internal/model"
+	"kicau.desktop/cctv/internal/auth"
+	authGW "kicau.desktop/cctv/internal/auth/gateway"
+	authUC "kicau.desktop/cctv/internal/auth/usecase"
+
+	"kicau.desktop/cctv/internal/config"
+	configRepo "kicau.desktop/cctv/internal/config/repository"
+	configUC "kicau.desktop/cctv/internal/config/usecase"
+
+	"kicau.desktop/cctv/internal/engine"
+	engineGW "kicau.desktop/cctv/internal/engine/gateway"
+	engineUC "kicau.desktop/cctv/internal/engine/usecase"
+
 	"kicau.desktop/cctv/internal/player"
-	"kicau.desktop/cctv/internal/settings"
-	authUC "kicau.desktop/cctv/internal/usecase/auth"
-	configUC "kicau.desktop/cctv/internal/usecase/config"
-	engineUC "kicau.desktop/cctv/internal/usecase/engine"
-	mediaUC "kicau.desktop/cctv/internal/usecase/media"
-	recordingUC "kicau.desktop/cctv/internal/usecase/recording"
+	playerModel "kicau.desktop/cctv/internal/player/model"
+	playerUC "kicau.desktop/cctv/internal/player/usecase"
+
+	"kicau.desktop/cctv/internal/recording"
+	recordingUC "kicau.desktop/cctv/internal/recording/usecase"
 )
 
-// Container manages the dependency injection lifecycle for the application.
 type Container struct {
-	Store   *settings.Store
-	Engine  *localapp.Client
-	Cloud   *cloud.Client
+	Store   *configRepo.Store
+	Engine  *engineGW.Client
+	Cloud   *authGW.Client
 	Players *player.Manager
 
-	ConfigUC    domain.ConfigUsecase
-	AuthUC      domain.AuthUsecase
-	EngineUC    domain.EngineUsecase
-	PlayerUC    domain.PlayerUsecase
-	RecordingUC domain.RecordingUsecase
+	ConfigUC    config.ConfigUsecase
+	AuthUC      auth.AuthUsecase
+	EngineUC    engine.EngineUsecase
+	PlayerUC    player.PlayerUsecase
+	RecordingUC recording.RecordingUsecase
 
 	Ctx    context.Context
 	Cancel context.CancelFunc
 }
 
-// New initializes configuration, repositories, and usecases.
 func New() (*Container, error) {
-	s, err := settings.New()
+	s, err := configRepo.New()
 	if err != nil {
 		return nil, err
 	}
-	cfg := settings.Default()
+	cfg := configRepo.Default()
 	if err := s.Load("desktop.json", &cfg, false); err != nil && !os.IsNotExist(err) {
 		return nil, errors.New("Pengaturan desktop tidak dapat dibaca; periksa desktop.json pada LocalAppData")
 	}
-	if err = settings.Validate(cfg); err != nil {
+	if err = configRepo.Validate(cfg); err != nil {
 		return nil, err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	engineClient := localapp.New(cfg.LocalURL)
-	cloudClient := cloud.New(cfg.CloudURL, s)
+	engineClient := engineGW.New(cfg.LocalURL)
+	cloudClient := authGW.New(cfg.CloudURL, s)
 
 	cfgUC := configUC.New(cfg, s)
 	authUCase := authUC.New(cloudClient)
@@ -72,10 +77,9 @@ func New() (*Container, error) {
 	return c, nil
 }
 
-// AttachPlayer initializes VLC player hardware driver and player usecase once window handle is available.
-func (c *Container) AttachPlayer(windowHandle func() uintptr, onStatus func(model.PlayerStatus)) {
+func (c *Container) AttachPlayer(windowHandle func() uintptr, onStatus func(playerModel.PlayerStatus)) {
 	cfg := c.ConfigUC.GetConfig()
 	c.Players = player.New(cfg.VLC, windowHandle, onStatus)
 	c.Players.LiveCacheMS = cfg.LiveCacheMS
-	c.PlayerUC = mediaUC.New(c.Players, c.Engine, c.ConfigUC)
+	c.PlayerUC = playerUC.New(c.Players, c.Engine, c.ConfigUC)
 }

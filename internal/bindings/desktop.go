@@ -6,7 +6,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"kicau.desktop/cctv/internal/container"
-	"kicau.desktop/cctv/internal/model"
+	playerModel "kicau.desktop/cctv/internal/player/model"
 )
 
 type Desktop struct {
@@ -38,7 +38,7 @@ func (d *Desktop) attach(a *application.App, w *application.WebviewWindow) {
 	d.window = w
 	d.container.AttachPlayer(
 		func() uintptr { return uintptr(w.NativeWindow()) },
-		func(s model.PlayerStatus) { a.Event.Emit("player:status", s) },
+		func(s playerModel.PlayerStatus) { a.Event.Emit("player:status", s) },
 	)
 	go d.container.EngineUC.SubscribeMetrics(d.ctx, func(v any) {
 		a.Event.Emit("engine:metric", v)

@@ -1,12 +1,12 @@
 package bindings
 
-import "kicau.desktop/cctv/internal/model"
+import configModel "kicau.desktop/cctv/internal/config/model"
 
-func (d *Desktop) GetConfig() model.Config {
+func (d *Desktop) GetConfig() configModel.Config {
 	return d.container.ConfigUC.GetConfig()
 }
 
-func (d *Desktop) SaveConfig(cfg model.Config) error {
+func (d *Desktop) SaveConfig(cfg configModel.Config) error {
 	return d.container.ConfigUC.SaveConfig(cfg)
 }
 

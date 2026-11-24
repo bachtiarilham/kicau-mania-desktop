@@ -3,7 +3,7 @@ package player
 import (
 	"errors"
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"kicau.desktop/cctv/internal/model"
+	"kicau.desktop/cctv/internal/player/model"
 	"kicau.desktop/cctv/internal/player/vlc"
 	native "kicau.desktop/cctv/internal/player/windows"
 	"strings"

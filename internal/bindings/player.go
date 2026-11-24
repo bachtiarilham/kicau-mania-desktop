@@ -3,18 +3,18 @@ package bindings
 import (
 	"errors"
 
-	"kicau.desktop/cctv/internal/model"
+	playerModel "kicau.desktop/cctv/internal/player/model"
 )
 
-func (d *Desktop) SyncPlayer(id string, r model.Rect) error {
+func (d *Desktop) SyncPlayer(id string, r playerModel.Rect) error {
 	return d.SyncPlayerWithZoom(id, r, 100)
 }
 
-func (d *Desktop) SyncZoomPlayer(id string, r model.Rect) error {
+func (d *Desktop) SyncZoomPlayer(id string, r playerModel.Rect) error {
 	return d.SyncPlayerWithZoom(id, r, 200)
 }
 
-func (d *Desktop) SyncPlayerWithZoom(id string, r model.Rect, zoom int) error {
+func (d *Desktop) SyncPlayerWithZoom(id string, r playerModel.Rect, zoom int) error {
 	if d.container.PlayerUC == nil {
 		return errors.New("Player belum siap")
 	}
@@ -40,7 +40,7 @@ func (d *Desktop) Mute(id string, muted bool) error {
 	return d.container.PlayerUC.Mute(id, muted)
 }
 
-func (d *Desktop) PlayRecording(id string, r model.Rect) error {
+func (d *Desktop) PlayRecording(id string, r playerModel.Rect) error {
 	if d.container.PlayerUC == nil {
 		return errors.New("Player belum siap")
 	}

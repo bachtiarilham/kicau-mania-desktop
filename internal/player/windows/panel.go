@@ -3,7 +3,7 @@ package windows
 import (
 	"errors"
 	"golang.org/x/sys/windows"
-	"kicau.desktop/cctv/internal/model"
+	"kicau.desktop/cctv/internal/player/model"
 	"math"
 	"unsafe"
 )

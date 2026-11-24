@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"kicau.desktop/cctv/internal/bindings"
+	configModel "kicau.desktop/cctv/internal/config/model"
+	configUC "kicau.desktop/cctv/internal/config/usecase"
 	"kicau.desktop/cctv/internal/container"
-	"kicau.desktop/cctv/internal/localapp"
-	"kicau.desktop/cctv/internal/model"
-	configUC "kicau.desktop/cctv/internal/usecase/config"
-	engineUC "kicau.desktop/cctv/internal/usecase/engine"
+	engineGW "kicau.desktop/cctv/internal/engine/gateway"
+	engineUC "kicau.desktop/cctv/internal/engine/usecase"
 )
 
 type mockStore struct{}
@@ -38,8 +38,8 @@ func TestSessionSnapshotClearsNativeStaleActivity(t *testing.T) {
 	defer server.Close()
 
 	ctx := context.Background()
-	engineClient := localapp.New(server.URL)
-	cfg := model.Config{}
+	engineClient := engineGW.New(server.URL)
+	cfg := configModel.Config{}
 	cfgUCase := configUC.New(cfg, &mockStore{})
 	engineUCase := engineUC.New(engineClient, &mockCloud{}, cfgUCase)
 
