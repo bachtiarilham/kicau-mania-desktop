@@ -1,32 +1,8 @@
 import { engine } from "./engine.svelte";
 import { api } from "$lib/services/api";
+import type { ParticipantMapping, RoundConfig, RoundState, ZoneId } from "$lib/models";
 
-export interface ParticipantMapping {
-  registrationId: string;
-  gantanganId: string;
-  gantanganNumber: number;
-  birdName: string;
-  birdCode?: string;
-  ownerName: string;
-  ownerPhone?: string;
-  channelId?: string;
-}
-
-export interface RoundConfig {
-  eventName: string;
-  sessionName: string;
-  startTime: string;
-  endTime: string;
-  jurors: string[];
-  totalDurationSeconds?: number;
-  shiftDurationSeconds?: number;
-  durationSeconds?: number;
-  eventId?: string;
-  roundId?: string;
-  participants?: ParticipantMapping[];
-}
-
-export type RoundState = "IDLE" | "RUNNING" | "PAUSED" | "FINISHED";
+export type { ParticipantMapping, RoundConfig, RoundState, ZoneId };
 
 export function getJudgeAssignedZone(
   judgeIndex: number,
