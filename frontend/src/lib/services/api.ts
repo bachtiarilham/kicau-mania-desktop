@@ -57,34 +57,6 @@ export async function all(path: string): Promise<Row[]> {
   }
   throw Error("Terlalu banyak data; persempit pilihan");
 }
-export async function job(
-  input: Row,
-  onUpdate: (v: Row) => void,
-  signal?: AbortSignal,
-): Promise<any> {
-  let value = await api.engine<Row>("POST", "/api/v1/setup/jobs", input);
-  onUpdate(value);
-  while (value.state === "RUNNING") {
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(resolve, 1000);
-      signal?.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timer);
-          reject(Error("Pemantauan dihentikan"));
-        },
-        { once: true },
-      );
-    });
-    value = await api.engine<Row>("GET", `/api/v1/setup/jobs/${value.id}`);
-    onUpdate(value);
-  }
-  if (value.state !== "SUCCEEDED")
-    throw Error(
-      [value.message, value.advice].filter(Boolean).join(". ") ||
-        "Pekerjaan gagal",
-    );
-  return value.result;
-}
+
 export const message = (e: unknown) =>
   e instanceof Error ? e.message : String(e);
