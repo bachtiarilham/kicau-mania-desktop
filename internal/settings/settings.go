@@ -119,8 +119,9 @@ func Validate(c model.Config) error {
 		}
 	}
 	u, e := url.Parse(c.CloudURL)
-	if e != nil || u.Scheme != "https" || u.User != nil || u.Hostname() == "" || u.RawQuery != "" || u.Fragment != "" || (strings.TrimRight(u.Path, "/") != "/api/v1" && strings.TrimRight(u.Path, "/") != "") {
-		return errors.New("Cloud URL harus HTTPS origin atau /api/v1")
+	isLocal := u != nil && u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1")
+	if e != nil || (u.Scheme != "https" && !isLocal) || u.User != nil || u.Hostname() == "" || u.RawQuery != "" || u.Fragment != "" || (strings.TrimRight(u.Path, "/") != "/api/v1" && strings.TrimRight(u.Path, "/") != "") {
+		return errors.New("Cloud URL harus HTTPS origin (atau http://localhost untuk dev) dengan path /api/v1")
 	}
 	if !filepath.IsAbs(c.VLC) {
 		return errors.New("Lokasi libvlc.dll harus path absolut")

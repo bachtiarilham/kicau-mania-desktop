@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import {
     Shield,
     Users,
@@ -6,6 +7,7 @@
     Eye,
     Lock,
     Mail,
+    Globe,
     ArrowRight,
     Sparkles,
     CheckCircle2,
@@ -22,6 +24,42 @@
   let password = $state("admin123");
   let error = $state("");
   let busy = $state(false);
+
+  // Cloud API Server configuration
+  let showServerConfig = $state(false);
+  let currentCloudUrl = $state("https://dev.megaallstararena.com/api/v1");
+  let savingUrl = $state(false);
+  let urlMessage = $state("");
+
+  onMount(() => {
+    void api
+      .config()
+      .then((cfg) => {
+        if (cfg?.cloud_url) currentCloudUrl = cfg.cloud_url;
+      })
+      .catch(() => {});
+  });
+
+  async function handleSaveCloudUrl() {
+    if (!currentCloudUrl.trim()) {
+      urlMessage = "Gagal: URL server tidak boleh kosong";
+      return;
+    }
+    savingUrl = true;
+    urlMessage = "";
+    try {
+      const existing = await api.config();
+      await api.saveConfig({
+        ...existing,
+        cloud_url: currentCloudUrl.trim(),
+      });
+      urlMessage = "Berhasil: Alamat server cloud telah disimpan";
+    } catch (err: any) {
+      urlMessage = "Gagal: " + (message(err) || "Format URL cloud tidak valid");
+    } finally {
+      savingUrl = false;
+    }
+  }
 
   function handleQuickLogin(role: UserRole) {
     auth.login(role);
@@ -296,6 +334,58 @@
           </Button>
         </div>
       </form>
+
+      <!-- Server Cloud API Configuration (Best Practice: Operator can switch hosting domain) -->
+      <div class="mt-6 border-t border-border pt-4">
+        <div class="flex items-center justify-between">
+          <button
+            type="button"
+            onclick={() => (showServerConfig = !showServerConfig)}
+            class="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
+          >
+            <Globe class="h-3.5 w-3.5 text-primary" />
+            <span>Alamat Server Cloud:</span>
+            <span class="font-mono text-[10px] text-primary/80 truncate max-w-xs">{currentCloudUrl}</span>
+          </button>
+          <button
+            type="button"
+            onclick={() => (showServerConfig = !showServerConfig)}
+            class="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+          >
+            {showServerConfig ? "Tutup" : "Ubah Alamat"}
+          </button>
+        </div>
+
+        {#if showServerConfig}
+          <div class="mt-3 rounded-xl border border-border bg-muted/60 p-3 space-y-2.5">
+            <div class="text-[10px] text-muted-foreground">
+              Masukkan alamat HTTPS API cloud hosting server (contoh: <code>https://api.kicaumania.com/api/v1</code>).
+            </div>
+            <div class="flex gap-2">
+              <Input
+                type="text"
+                bind:value={currentCloudUrl}
+                placeholder="https://api.domain.com/api/v1"
+                class="bg-card text-xs font-mono"
+              />
+              <Button
+                type="button"
+                size="sm"
+                disabled={savingUrl}
+                onclick={handleSaveCloudUrl}
+                class="text-xs font-bold bg-primary text-black hover:bg-primary/90 shrink-0"
+              >
+                {savingUrl ? "Menyimpan..." : "Simpan URL"}
+              </Button>
+            </div>
+            {#if urlMessage}
+              <div class="text-[11px] font-semibold {urlMessage.includes('Gagal') ? 'text-red-400' : 'text-emerald-400'}">
+                {urlMessage}
+              </div>
+            {/if}
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 </div>
