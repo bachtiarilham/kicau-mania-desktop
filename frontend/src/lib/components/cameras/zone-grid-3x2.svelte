@@ -148,7 +148,7 @@
             title={hudCollapsed ? "Tampilkan panel info juri" : "Perkecil panel info juri"}
           >
             {#if hudCollapsed}
-              <PanelLeftOpen class="h-3.5 w-3.5 text-amber-700" />
+              <PanelLeftOpen class="h-3.5 w-3.5 text-amber-400" />
               <span class="hidden sm:inline">Info Juri</span>
             {:else}
               <PanelLeftClose class="h-3.5 w-3.5" />
@@ -192,7 +192,7 @@
             variant="outline"
             size="sm"
             onclick={() => (focusId = null)}
-            class="h-7 text-xs border-amber-500/40 text-amber-700 hover:bg-amber-500/10"
+            class="h-7 text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
           >
             Kembali ke Grid 3x2
           </Button>
@@ -206,7 +206,7 @@
             class="h-2 w-2 rounded-full {roundStore.state === 'RUNNING' ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}"
           ></span>
           <div class="flex flex-col text-right font-mono">
-            <span class="text-xs font-black text-amber-700 leading-none">
+            <span class="text-xs font-black text-amber-400 leading-none">
               Area: {roundStore.shiftRemainingSeconds}s
             </span>
             <span class="text-[9px] text-muted-foreground leading-tight">
@@ -286,12 +286,12 @@
               <div class="flex shrink-0 items-center gap-1">
                 <span class="font-mono text-[9px] text-muted-foreground">
                   {#if engine.running}
-                    <span class="inline-flex items-center gap-1 text-rose-700 font-bold">
+                    <span class="inline-flex items-center gap-1 text-rose-400 font-bold">
                       <span class="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse"></span>
                       REC
                     </span>
                   {:else if engine.connected}
-                    <span class="inline-flex items-center gap-1 text-emerald-700">
+                    <span class="inline-flex items-center gap-1 text-emerald-400">
                       <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
                       {engine.playerStatus[slot.channelId]?.fps !== undefined
                         ? `${Number(engine.playerStatus[slot.channelId].fps).toFixed(0)} FPS`
@@ -312,7 +312,7 @@
                   {#if audibleId !== slot.channelId}
                     <VolumeX class="h-3.5 w-3.5 text-muted-foreground" />
                   {:else}
-                    <Volume2 class="h-3.5 w-3.5 text-sky-700" />
+                    <Volume2 class="h-3.5 w-3.5 text-sky-400" />
                   {/if}
                 </button>
 
@@ -324,7 +324,7 @@
                   title={focusId === slot.channelId ? "Kembali ke 3x2" : "Fokus"}
                 >
                   {#if focusId === slot.channelId}
-                    <Minimize2 class="h-3.5 w-3.5 text-amber-700" />
+                    <Minimize2 class="h-3.5 w-3.5 text-amber-400" />
                   {:else}
                     <Maximize2 class="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
                   {/if}

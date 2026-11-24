@@ -42,8 +42,8 @@
       <!-- Status Box -->
       <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs">
         <div class="flex items-center justify-between">
-          <span class="font-bold text-amber-700">Status Sesi Lapangan:</span>
-          <span class="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-rose-600">
+          <span class="font-bold text-amber-400">Status Sesi Lapangan:</span>
+          <span class="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-rose-400">
             <span class="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
             MEREKAM ({engine.channels.length} Kamera)
           </span>
@@ -72,7 +72,7 @@
             <Square class="h-4 w-4 fill-current" />
           </div>
           <div>
-            <div class="text-xs font-bold text-red-700">STOP & SIMPAN REKAMAN</div>
+            <div class="text-xs font-bold text-red-400">STOP & SIMPAN REKAMAN</div>
             <div class="text-[10px] text-muted-foreground">Akhiri ronde sekarang & ekspor rekaman ke folder ronde</div>
           </div>
         </div>

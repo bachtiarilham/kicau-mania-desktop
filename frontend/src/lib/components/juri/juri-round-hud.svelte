@@ -93,7 +93,7 @@
         <ChevronRight class="h-4 w-4" />
       </button>
 
-      <span class="rounded bg-amber-500/20 p-1.5 text-amber-700">
+      <span class="rounded bg-amber-500/20 p-1.5 text-amber-400">
         <Trophy class="h-4 w-4" />
       </span>
 
@@ -106,10 +106,10 @@
     <!-- Vertical Timer Reading -->
     <div class="flex flex-col items-center gap-1 font-mono">
       <TimerIcon
-        class="h-4 w-4 {isShiftTimeUp ? 'animate-bounce text-red-700' : isLowShiftTime ? 'animate-pulse text-amber-700' : 'text-emerald-700'}"
+        class="h-4 w-4 {isShiftTimeUp ? 'animate-bounce text-red-400' : isLowShiftTime ? 'animate-pulse text-amber-400' : 'text-emerald-400'}"
       />
       <span
-        class="text-xs font-black tracking-wider {isShiftTimeUp ? 'text-red-700 font-bold' : isLowShiftTime ? 'text-amber-700' : 'text-foreground'}"
+        class="text-xs font-black tracking-wider {isShiftTimeUp ? 'text-red-400 font-bold' : isLowShiftTime ? 'text-amber-400' : 'text-foreground'}"
       >
         {roundStore.shiftRemainingSeconds}s
       </span>
@@ -131,7 +131,7 @@
             <Trophy class="h-4 w-4" />
           </div>
           <div>
-            <div class="text-[10px] font-bold tracking-widest text-amber-700 uppercase">
+            <div class="text-[10px] font-bold tracking-widest text-amber-400 uppercase">
               Nama Event
             </div>
             <h2 class="text-sm font-extrabold tracking-tight text-foreground line-clamp-1">
@@ -155,11 +155,11 @@
       <!-- Sesi, Status, & Shift Section -->
       <div class="rounded-xl border border-border bg-muted p-3 shadow-inner space-y-2">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-black tracking-wider text-amber-700 uppercase">
+          <span class="text-xs font-black tracking-wider text-amber-400 uppercase">
             {roundStore.sessionName} (10 MENIT)
           </span>
           <span
-            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase {roundStore.state === 'RUNNING' ? 'bg-emerald-500/20 text-emerald-700 border border-emerald-500/30' : 'bg-accent text-muted-foreground'}"
+            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase {roundStore.state === 'RUNNING' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-accent text-muted-foreground'}"
           >
             <span
               class="h-1.5 w-1.5 rounded-full {roundStore.state === 'RUNNING' ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}"
@@ -210,7 +210,7 @@
               Berikutnya: <strong class="text-foreground">{nextAssignedZone}</strong>
             </span>
           {:else}
-            <span class="text-emerald-700 font-semibold">Shift Terakhir</span>
+            <span class="text-emerald-400 font-semibold">Shift Terakhir</span>
           {/if}
         </div>
       </div>
@@ -219,7 +219,7 @@
       <div class="space-y-1.5">
         <div class="flex items-center justify-between px-1 text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
           <span class="flex items-center gap-1.5">
-            <Users class="h-3 w-3 text-sky-700" />
+            <Users class="h-3 w-3 text-sky-400" />
             <span>4 Dewan Juri & Rotasi</span>
           </span>
           <span class="text-[9px] lowercase font-normal">klik untuk pilih</span>
@@ -237,7 +237,7 @@
             >
               <div class="flex min-w-0 items-center gap-2">
                 <span
-                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold border {isMe ? 'bg-primary text-primary-foreground border-primary' : 'bg-gradient-to-br from-sky-500/20 to-blue-600/20 text-sky-700 border-sky-400/20'}"
+                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold border {isMe ? 'bg-primary text-primary-foreground border-primary' : 'bg-gradient-to-br from-sky-500/20 to-blue-600/20 text-sky-400 border-sky-400/20'}"
                 >
                   J{idx + 1}
                 </span>
@@ -256,14 +256,14 @@
     <div class="mt-4 space-y-3 pt-3 border-t border-border">
       <!-- Digital Countdown Display for Area (150s) -->
       <div
-        class="relative flex flex-col items-center justify-center rounded-2xl border p-4 text-center transition-all duration-300 {isRoundFinished ? 'border-emerald-500 bg-emerald-50' : isShiftTimeUp ? 'border-red-500/80 bg-red-50 shadow-lg shadow-red-900/30 animate-pulse' : isLowShiftTime ? 'border-amber-500/50 bg-amber-50' : 'border-border bg-muted'}"
+        class="relative flex flex-col items-center justify-center rounded-2xl border p-4 text-center transition-all duration-300 {isRoundFinished ? 'border-emerald-500 bg-emerald-500/15' : isShiftTimeUp ? 'border-red-500/80 bg-red-500/15 shadow-lg shadow-red-900/30 animate-pulse' : isLowShiftTime ? 'border-amber-500/50 bg-amber-500/15' : 'border-border bg-muted'}"
       >
-        <span class="text-[11px] font-bold tracking-widest text-amber-700 uppercase">
+        <span class="text-[11px] font-bold tracking-widest text-amber-400 uppercase">
           {isRoundFinished ? 'Ronde Selesai' : `Timer Area · Shift ${roundStore.currentShift}/4`}
         </span>
 
         <!-- Giant Number Display (Shift Countdown) -->
-        <div class="my-1 font-mono text-5xl font-black tracking-tighter sm:text-6xl {isRoundFinished ? 'text-emerald-700' : isShiftTimeUp ? 'text-red-700 animate-pulse' : isLowShiftTime ? 'text-amber-700' : 'text-foreground'}">
+        <div class="my-1 font-mono text-5xl font-black tracking-tighter sm:text-6xl {isRoundFinished ? 'text-emerald-400' : isShiftTimeUp ? 'text-red-400 animate-pulse' : isLowShiftTime ? 'text-amber-400' : 'text-foreground'}">
           {roundStore.shiftRemainingSeconds}
         </div>
 
@@ -284,18 +284,18 @@
       <!-- Rotation Alert: Prompt judges to rotate to next zone -->
       {#if isRoundFinished}
         <div
-          class="flex items-center gap-2 rounded-xl border border-emerald-500 bg-emerald-500/20 p-3 text-emerald-800 shadow-md shadow-emerald-600/20"
+          class="flex items-center gap-2 rounded-xl border border-emerald-500 bg-emerald-500/20 p-3 text-emerald-300 shadow-md shadow-emerald-600/20"
         >
-          <CheckCircle2 class="h-5 w-5 shrink-0 text-emerald-700" />
+          <CheckCircle2 class="h-5 w-5 shrink-0 text-emerald-400" />
           <div class="text-[11px] font-bold leading-tight">
             Waktu 10 Menit Selesai! Menunggu konfirmasi operator di arena.
           </div>
         </div>
       {:else if isShiftTimeUp}
         <div
-          class="flex items-center gap-2 rounded-xl border border-red-500 bg-red-600/20 p-3 text-red-700 shadow-md shadow-red-600/20 animate-bounce"
+          class="flex items-center gap-2 rounded-xl border border-red-500 bg-red-600/20 p-3 text-red-300 shadow-md shadow-red-600/20 animate-bounce"
         >
-          <AlertTriangle class="h-5 w-5 shrink-0 text-red-700" />
+          <AlertTriangle class="h-5 w-5 shrink-0 text-red-400" />
           <div class="text-[11px] font-bold leading-tight">
             Waktu 150s Habis! Pindah ke {ZONE_INFO[nextAssignedZone].name} ({ZONE_INFO[nextAssignedZone].range})!
           </div>
@@ -304,7 +304,7 @@
         <div
           class="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-accent py-2 text-center text-[10px] font-medium text-muted-foreground"
         >
-          <Sparkles class="h-3 w-3 text-amber-700" />
+          <Sparkles class="h-3 w-3 text-amber-400" />
           <span>Rotasi ke area berikutnya saat timer 150s habis</span>
         </div>
       {/if}

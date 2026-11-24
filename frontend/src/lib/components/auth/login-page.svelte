@@ -121,7 +121,7 @@
       <h1 class="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
         KICAU MANIA DESKTOP
       </h1>
-      <p class="mt-1 text-xs tracking-widest text-emerald-700 font-semibold uppercase">
+      <p class="mt-1 text-xs tracking-widest text-emerald-400 font-semibold uppercase">
         Arena Surveillance & Competition Workspace
       </p>
       <p class="mx-auto mt-2 max-w-md text-xs text-muted-foreground">
@@ -138,10 +138,10 @@
         class="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 text-left shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-amber-500/50 hover:bg-accent hover:shadow-amber-500/10"
       >
         <div>
-          <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-700 ring-1 ring-amber-500/30 group-hover:scale-105 transition">
+          <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30 group-hover:scale-105 transition">
             <Eye class="h-5 w-5" />
           </div>
-          <h2 class="text-base font-bold text-foreground group-hover:text-amber-700 transition">
+          <h2 class="text-base font-bold text-foreground group-hover:text-amber-400 transition">
             Dewan Juri
           </h2>
           <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">
@@ -150,10 +150,10 @@
         </div>
 
         <div class="mt-5 flex items-center justify-between border-t border-border pt-3">
-          <span class="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-700 uppercase">
+          <span class="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-400 uppercase">
             Akses Juri
           </span>
-          <span class="flex items-center gap-1 text-xs font-semibold text-amber-700 group-hover:translate-x-1 transition">
+          <span class="flex items-center gap-1 text-xs font-semibold text-amber-400 group-hover:translate-x-1 transition">
             Masuk <ArrowRight class="h-3.5 w-3.5" />
           </span>
         </div>
@@ -166,10 +166,10 @@
         class="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 text-left shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-emerald-500/50 hover:bg-accent hover:shadow-emerald-500/10"
       >
         <div>
-          <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-700 ring-1 ring-emerald-500/30 group-hover:scale-105 transition">
+          <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30 group-hover:scale-105 transition">
             <Radio class="h-5 w-5" />
           </div>
-          <h2 class="text-base font-bold text-foreground group-hover:text-emerald-700 transition">
+          <h2 class="text-base font-bold text-foreground group-hover:text-emerald-400 transition">
             Operator Arena
           </h2>
           <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">
@@ -178,10 +178,10 @@
         </div>
 
         <div class="mt-5 flex items-center justify-between border-t border-border pt-3">
-          <span class="rounded bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-700 uppercase">
+          <span class="rounded bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-400 uppercase">
             Akses Operator
           </span>
-          <span class="flex items-center gap-1 text-xs font-semibold text-emerald-700 group-hover:translate-x-1 transition">
+          <span class="flex items-center gap-1 text-xs font-semibold text-emerald-400 group-hover:translate-x-1 transition">
             Masuk <ArrowRight class="h-3.5 w-3.5" />
           </span>
         </div>
@@ -194,10 +194,10 @@
         class="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 text-left shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-sky-500/50 hover:bg-accent hover:shadow-sky-500/10"
       >
         <div>
-          <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/20 text-sky-700 ring-1 ring-sky-500/30 group-hover:scale-105 transition">
+          <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400 ring-1 ring-sky-500/30 group-hover:scale-105 transition">
             <Shield class="h-5 w-5" />
           </div>
-          <h2 class="text-base font-bold text-foreground group-hover:text-sky-700 transition">
+          <h2 class="text-base font-bold text-foreground group-hover:text-sky-400 transition">
             Administrator
           </h2>
           <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">
@@ -206,10 +206,10 @@
         </div>
 
         <div class="mt-5 flex items-center justify-between border-t border-border pt-3">
-          <span class="rounded bg-sky-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-sky-700 uppercase">
+          <span class="rounded bg-sky-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-sky-400 uppercase">
             Akses Penuh
           </span>
-          <span class="flex items-center gap-1 text-xs font-semibold text-sky-700 group-hover:translate-x-1 transition">
+          <span class="flex items-center gap-1 text-xs font-semibold text-sky-400 group-hover:translate-x-1 transition">
             Masuk <ArrowRight class="h-3.5 w-3.5" />
           </span>
         </div>
@@ -227,21 +227,21 @@
           <button
             type="button"
             onclick={() => handleAutoFill("juri")}
-            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-amber-700 hover:bg-accent"
+            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-amber-400 hover:bg-accent/80"
           >
             Auto: Juri
           </button>
           <button
             type="button"
             onclick={() => handleAutoFill("operator")}
-            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-accent"
+            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:bg-accent/80"
           >
             Auto: Operator
           </button>
           <button
             type="button"
             onclick={() => handleAutoFill("admin")}
-            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-sky-700 hover:bg-accent"
+            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-sky-400 hover:bg-accent/80"
           >
             Auto: Admin
           </button>
@@ -249,8 +249,8 @@
       </div>
 
       {#if error}
-        <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-50 p-3 text-xs text-red-700">
-          <AlertCircle class="h-4 w-4 shrink-0 text-red-700" />
+        <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/15 p-3 text-xs text-red-400">
+          <AlertCircle class="h-4 w-4 shrink-0 text-red-400" />
           <span>{error}</span>
         </div>
       {/if}

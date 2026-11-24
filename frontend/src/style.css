@@ -10,14 +10,14 @@
   --color-popover: var(--card);
   --color-popover-foreground: var(--foreground);
   --color-primary: var(--primary);
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #e6efeb;
+  --color-primary-foreground: #12160d;
+  --color-secondary: #23302b;
   --color-secondary-foreground: var(--foreground);
-  --color-muted: #f0f4f2;
-  --color-muted-foreground: #52635e;
-  --color-accent: #e4f1eb;
+  --color-muted: #1b2425;
+  --color-muted-foreground: #8a9a9a;
+  --color-accent: #25302e;
   --color-accent-foreground: var(--foreground);
-  --color-destructive: #b91c38;
+  --color-destructive: #fb7185;
   --color-border: var(--border);
   --color-input: var(--border);
   --color-ring: var(--primary);
@@ -28,14 +28,14 @@
 }
 :root {
   font-family: "Inter Variable", sans-serif;
-  --background: #f4f7f6;
-  --foreground: #14251f;
-  --card: #ffffff;
-  --primary: #17634d;
-  --border: #d9e4df;
+  --background: #101718;
+  --foreground: #e9efec;
+  --card: #172122;
+  --primary: #d4ed95;
+  --border: #2b3838;
   color: var(--foreground);
   background: var(--background);
-  color-scheme: light;
+  color-scheme: dark;
 }
 * {
   box-sizing: border-box;
@@ -89,7 +89,7 @@ h2 {
   font-weight: 600;
 }
 .subtitle {
-  color: #52635e;
+  color: #8a9a9a;
   font-size: 13px;
   margin-top: 6px;
 }
@@ -104,7 +104,7 @@ h2 {
   min-width: 0;
   gap: 7px;
   font-size: 12px;
-  color: #3c5047;
+  color: #afbfba;
 }
 .field > input,
 .field > select,
@@ -127,30 +127,30 @@ fieldset {
   border-radius: 14px;
   padding: 60px 24px;
   text-align: center;
-  color: #52635e;
+  color: #8a9a9a;
 }
 .chip {
   font-size: 11px;
   letter-spacing: 0.04em;
-  border: 1px solid #d9e4df;
+  border: 1px solid #364440;
   border-radius: 6px;
   padding: 4px 7px;
-  color: #3e584c;
+  color: #afc0b4;
 }
 .error {
   padding: 12px 16px;
-  border: 1px solid #efc5cd;
-  background: #fff1f3;
+  border: 1px solid #7b3a46;
+  background: #381e26;
   border-radius: 10px;
-  color: #9f1734;
+  color: #fda4af;
   font-size: 13px;
 }
 .notice {
   padding: 12px 16px;
-  border: 1px solid #bedccd;
-  background: #edf8f2;
+  border: 1px solid #48563a;
+  background: #263221;
   border-radius: 10px;
-  color: #17634d;
+  color: #d4ed95;
   font-size: 13px;
 }
 table {
@@ -164,7 +164,7 @@ td {
   border-bottom: 1px solid var(--border);
 }
 th {
-  color: #52635e;
+  color: #8a9a9a;
   font-weight: 500;
 }
 progress {

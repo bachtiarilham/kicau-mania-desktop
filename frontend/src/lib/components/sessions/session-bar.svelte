@@ -156,7 +156,7 @@
       <Circle
         size={10}
         class={engine.running
-          ? "fill-red-500 text-red-700 animate-pulse"
+          ? "fill-red-500 text-red-400 animate-pulse"
           : "text-muted-foreground"}
       />
       <div class="text-xs font-semibold tracking-wide">
@@ -166,7 +166,7 @@
         <span class="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded border border-border" title="Sisa Waktu Ronde 10 Menit">
           Ronde: {formattedRoundRemaining}
         </span>
-        <span class="font-mono text-[11px] font-semibold text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20" title="Shift & Countdown Area 150 Detik">
+        <span class="font-mono text-[11px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20" title="Shift & Countdown Area 150 Detik">
           Shift {roundStore.currentShift}/4 ({roundStore.shiftRemainingSeconds}s)
         </span>
       {:else if elapsed > 0}
@@ -197,11 +197,11 @@
     <div class="flex items-center gap-1.5 text-[11px]">
       <Cloud size={13} class="text-muted-foreground" />
       {#if engine.running}
-        <span class="flex items-center gap-1 text-amber-700 font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+        <span class="flex items-center gap-1 text-amber-400 font-medium bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30">
           <Pause size={10} /> Upload Paused (Lomba Aktif)
         </span>
       {:else}
-        <span class="flex items-center gap-1 text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+        <span class="flex items-center gap-1 text-emerald-400 font-medium bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/30">
           <CheckCircle2 size={10} /> Upload Siap (Jeda Sesi)
         </span>
       {/if}

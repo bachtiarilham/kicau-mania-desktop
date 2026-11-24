@@ -95,10 +95,10 @@
       <ZoneGrid3x2>
         {#snippet identity(collapsed)}
           <header class="flex shrink-0 flex-col items-center gap-2 border-b border-border py-3 text-center {collapsed ? 'px-1' : 'px-4'}">
-            <span class="grid size-7 place-items-center rounded-lg bg-amber-500/20 text-xs font-bold text-amber-700" aria-hidden="true">KM</span>
+            <span class="grid size-7 place-items-center rounded-lg bg-amber-500/20 text-xs font-bold text-amber-400 ring-1 ring-amber-500/30" aria-hidden="true">KM</span>
             {#if !collapsed}
               <h1 class="text-sm font-bold tracking-normal">Layar Penilaian Dewan Juri</h1>
-              <span class="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-700">JURI ARENA</span>
+              <span class="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">JURI ARENA</span>
               <span class="max-w-full truncate text-xs font-medium text-muted-foreground">{auth.userName}</span>
             {/if}
             <Button variant="outline" size={collapsed ? "icon-sm" : "sm"} onclick={handleLogout} aria-label="Ganti Akun" title="Ganti Akun">

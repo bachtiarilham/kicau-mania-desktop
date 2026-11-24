@@ -211,7 +211,7 @@
             <Trophy class="h-4 w-4" />
           </div>
           <div>
-            <div class="text-[9px] font-bold tracking-widest text-amber-700 uppercase">
+            <div class="text-[9px] font-bold tracking-widest text-amber-400 uppercase">
               Nama Event
             </div>
             <div class="text-xs font-extrabold tracking-tight text-foreground">
@@ -225,7 +225,7 @@
             <div class="text-[9px] font-bold tracking-widest text-muted-foreground uppercase">
               Babak Penilaian
             </div>
-            <div class="text-xs font-black text-amber-700">
+            <div class="text-xs font-black text-amber-400">
               {roundStore.sessionName}
             </div>
           </div>
@@ -264,7 +264,7 @@
 
         <!-- Giant Synchronized Countdown Timer (Dual Reading: 10m Round & 150s Shift) -->
         <div
-          class="flex items-center gap-2.5 rounded-xl border px-3 py-1 shadow-inner transition-all {roundStore.state === 'RUNNING' ? 'border-emerald-500/50 bg-emerald-50' : roundStore.roundRemainingSeconds === 0 ? 'border-red-500/80 bg-red-50 animate-pulse' : 'border-border bg-muted'}"
+          class="flex items-center gap-2.5 rounded-xl border px-3 py-1 shadow-inner transition-all {roundStore.state === 'RUNNING' ? 'border-emerald-500/50 bg-emerald-500/15' : roundStore.roundRemainingSeconds === 0 ? 'border-red-500/80 bg-red-500/15 animate-pulse' : 'border-border bg-muted'}"
         >
           <div class="flex flex-col items-center">
             <span class="text-[8px] font-bold tracking-widest text-muted-foreground uppercase">
@@ -272,11 +272,11 @@
             </span>
             <div class="flex items-baseline gap-1.5 font-mono">
               <span
-                class="text-2xl font-black tracking-tight {roundStore.state === 'RUNNING' ? 'text-emerald-700' : roundStore.roundRemainingSeconds === 0 ? 'text-red-700' : 'text-foreground'}"
+                class="text-2xl font-black tracking-tight {roundStore.state === 'RUNNING' ? 'text-emerald-400' : roundStore.roundRemainingSeconds === 0 ? 'text-red-400' : 'text-foreground'}"
               >
                 {Math.floor(roundStore.roundRemainingSeconds / 60)}:{String(roundStore.roundRemainingSeconds % 60).padStart(2, "0")}
               </span>
-              <span class="text-xs font-bold text-amber-700">
+              <span class="text-xs font-bold text-amber-400">
                 ({roundStore.shiftRemainingSeconds}s)
               </span>
             </div>
@@ -361,7 +361,7 @@
           variant="outline"
           size="sm"
           onclick={() => (spotlightId = null)}
-          class="h-7 text-xs border-amber-500/40 text-amber-700 hover:bg-amber-500/10"
+          class="h-7 text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
         >
           Tutup Sorotan (Kembali ke Matrix)
         </Button>
@@ -445,9 +445,9 @@
               <div class="flex shrink-0 items-center gap-1">
                 <span class="font-mono text-[8px] text-muted-foreground">
                   {#if engine.running}
-                    <span class="text-rose-700 font-bold animate-pulse">REC</span>
+                    <span class="text-rose-400 font-bold animate-pulse">REC</span>
                   {:else if engine.connected}
-                    <span class="text-emerald-700 font-bold">LIVE</span>
+                    <span class="text-emerald-400 font-bold">LIVE</span>
                   {:else}
                     <span class="text-muted-foreground">STANDBY</span>
                   {/if}
@@ -462,7 +462,7 @@
                   {#if audibleId !== stream.id}
                     <VolumeX class="h-3 w-3 text-muted-foreground" />
                   {:else}
-                    <Volume2 class="h-3 w-3 text-sky-700" />
+                    <Volume2 class="h-3 w-3 text-sky-400" />
                   {/if}
                 </button>
 
@@ -529,9 +529,9 @@
               <div class="flex shrink-0 items-center gap-1">
                 <span class="font-mono text-[8px] text-muted-foreground">
                   {#if engine.running}
-                    <span class="text-rose-700 font-bold animate-pulse">REC</span>
+                    <span class="text-rose-400 font-bold animate-pulse">REC</span>
                   {:else if engine.connected}
-                    <span class="text-emerald-700 font-bold">LIVE</span>
+                    <span class="text-emerald-400 font-bold">LIVE</span>
                   {:else}
                     <span class="text-muted-foreground">STANDBY</span>
                   {/if}
@@ -546,7 +546,7 @@
                   {#if audibleId !== stream.id}
                     <VolumeX class="h-3 w-3 text-muted-foreground" />
                   {:else}
-                    <Volume2 class="h-3 w-3 text-sky-700" />
+                    <Volume2 class="h-3 w-3 text-sky-400" />
                   {/if}
                 </button>
 
@@ -595,7 +595,7 @@
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
     <div class="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-foreground shadow-2xl">
       <div class="flex items-center gap-2 border-b border-border pb-3">
-        <Trophy class="h-5 w-5 text-amber-700" />
+        <Trophy class="h-5 w-5 text-amber-400" />
         <h3 class="text-base font-bold text-foreground">Konfigurasi Lomba & Dewan Juri</h3>
       </div>
 

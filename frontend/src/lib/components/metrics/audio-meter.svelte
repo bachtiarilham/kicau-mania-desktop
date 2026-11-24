@@ -28,12 +28,12 @@
 >
   <div class="{compact ? 'mb-1' : 'mb-2'} flex min-w-0 items-center justify-between gap-1.5">
     <span class="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
-      <Volume2 size={12} class="text-sky-700" />
+      <Volume2 size={12} class="text-sky-400" />
       <span>Audio Burung</span>
     </span>
     <div class="flex items-center gap-1.5 font-mono">
       <span class="text-[9px] text-muted-foreground">RMS: {rms === null ? "—" : rms.toFixed(1)}</span>
-      <span class="rounded bg-muted px-1 text-[10px] font-semibold text-emerald-700">
+      <span class="rounded bg-muted px-1 text-[10px] font-semibold text-emerald-400">
         {peak === null ? "— dBFS" : `${peak.toFixed(1)} dBFS`}
       </span>
     </div>
@@ -79,13 +79,13 @@
       <polyline
         {points}
         fill="none"
-        stroke="#0369a1"
+        stroke="#38bdf8"
         stroke-width="1.25"
         stroke-linejoin="round"
         vector-effect="non-scaling-stroke"
       />
     </svg>
-    <span class="absolute right-1 top-0.5 font-mono text-[7px] text-amber-700/80" title="Garis acuan visual; tidak mengubah pengaturan deteksi engine">−35 dB</span>
+    <span class="absolute right-1 top-0.5 font-mono text-[7px] text-amber-400/80" title="Garis acuan visual; tidak mengubah pengaturan deteksi engine">−35 dB</span>
     <span class="absolute bottom-0.5 left-1 font-mono text-[7px] text-muted-foreground">−65 ◂ Now</span>
     {#if peak === null}
       <span class="absolute inset-0 grid place-content-center text-[9px] text-muted-foreground">
