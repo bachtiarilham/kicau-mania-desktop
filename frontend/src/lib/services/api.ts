@@ -14,6 +14,12 @@ export const api = {
   engine: <T = any>(method: string, path: string, body: Row | null = null) =>
     call<T>("Engine", method, path, body),
   cloud: <T = any>(path: string) => call<T>("Cloud", path),
+  roundAction: <T = any>(
+    arenaID: string,
+    roundID: string,
+    action: "start" | "begin-judging" | "close",
+    expectedStatus: string,
+  ) => call<T>("RoundAction", arenaID, roundID, action, expectedStatus),
   login: (email: string, password: string) =>
     call<Row>("Login", email, password),
   logout: () => call("Logout"),

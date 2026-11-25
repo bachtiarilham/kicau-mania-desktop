@@ -80,6 +80,26 @@ func (u *usecase) Cloud(ctx context.Context, path string) (any, error) {
 	return out, err
 }
 
+func (u *usecase) RoundAction(ctx context.Context, arenaID, roundID, action, expectedStatus string) (any, error) {
+	switch action {
+	case "start", "begin-judging", "close":
+	default:
+		return nil, errors.New("Aksi ronde tidak diizinkan")
+	}
+	if strings.TrimSpace(arenaID) == "" || strings.TrimSpace(roundID) == "" {
+		return nil, errors.New("Arena dan ronde wajib ditentukan")
+	}
+	var out any
+	err := u.cloud.Call(
+		ctx,
+		"POST",
+		"/arenas/"+strings.TrimSpace(arenaID)+"/rounds/"+strings.TrimSpace(roundID)+"/"+action,
+		map[string]any{"expected_status": expectedStatus},
+		&out,
+	)
+	return out, err
+}
+
 func (u *usecase) Revoke(ctx context.Context, engineID string) error {
 	return u.cloud.Call(ctx, "DELETE", "/media/engines/"+engineID, nil, nil)
 }

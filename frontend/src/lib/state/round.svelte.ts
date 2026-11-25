@@ -1,4 +1,5 @@
 import { engine } from "./engine.svelte";
+import { auth } from "./auth.svelte";
 import { api } from "$lib/services/api";
 import type {
   JudgeZoneScheduleItem,
@@ -362,6 +363,10 @@ class RoundStore {
     this.startLocalTicker();
     this.broadcast();
 
+    if (typeof window !== "undefined" && auth.arenaId && this.roundId) {
+      void api.roundAction(auth.arenaId, this.roundId, "start", "PREPARED").catch(() => {});
+    }
+
     // Trigger local engine recording if not running
     try {
       if (typeof window !== "undefined" && !engine.running && !engine.busy) {
@@ -395,6 +400,10 @@ class RoundStore {
     this.timeUpDialog = false;
     this.rotationAlert = false;
     this.broadcast();
+
+    if (typeof window !== "undefined" && auth.arenaId && this.roundId) {
+      void api.roundAction(auth.arenaId, this.roundId, "begin-judging", "RUNNING").catch(() => {});
+    }
 
     // Stop recording on engine
     try {

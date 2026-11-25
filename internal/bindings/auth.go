@@ -12,6 +12,10 @@ func (d *Desktop) Cloud(path string) (any, error) {
 	return d.container.AuthUC.Cloud(d.ctx, path)
 }
 
+func (d *Desktop) RoundAction(arenaID, roundID, action, expectedStatus string) (any, error) {
+	return d.container.AuthUC.RoundAction(d.ctx, arenaID, roundID, action, expectedStatus)
+}
+
 func (d *Desktop) Revoke(engineID string) error {
 	return d.container.AuthUC.Revoke(d.ctx, engineID)
 }
