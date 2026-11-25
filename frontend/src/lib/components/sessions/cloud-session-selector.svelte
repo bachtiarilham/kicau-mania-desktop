@@ -47,6 +47,10 @@
   // Computed selected objects
   let selectedEvent = $derived(events.find((e) => e.id === selectedEventId));
   let selectedRound = $derived(rounds.find((r) => r.id === selectedRoundId));
+  const roundJurors = $derived.by(() => {
+    const assigned = [1, 2, 3, 4].map((slot) => selectedRound?.[`field_judge_${slot}`] || "");
+    return assigned.some(Boolean) ? assigned : judges.slice(0, 4).map((judge) => judge.judge_name || "");
+  });
 
   $effect(() => {
     if (open) {
@@ -131,7 +135,7 @@
       const res = await api.cloud<any>(`/arenas/${arenaId}/rounds?limit=50`);
       const allRounds = Array.isArray(res?.items) ? res.items : [];
       // Filter rounds matching event if eventId is set
-      rounds = allRounds.filter((r: any) => !r.event_id || r.event_id === eventId);
+      rounds = allRounds.filter((r: any) => r.event_id === eventId);
       if (rounds.length > 0) {
         selectedRoundId = rounds[0].id;
         await loadRoundDetails(arenaId, selectedRoundId);
@@ -183,6 +187,7 @@
   }
 
   async function handleApplyToLivestream() {
+    if (roundStore.state === "RUNNING") return;
     if (!selectedRound) {
       error = "Silakan pilih sesi lomba terlebih dahulu.";
       return;
@@ -191,14 +196,6 @@
     binding = true;
     error = "";
     try {
-      // 1. Prepare Juror names (from round fields or judges list)
-      const formattedJurors: string[] = [
-        selectedRound.field_judge_1 || judges[0]?.judge_name || "Juri 1",
-        selectedRound.field_judge_2 || judges[1]?.judge_name || "Juri 2",
-        selectedRound.field_judge_3 || judges[2]?.judge_name || "Juri 3",
-        selectedRound.field_judge_4 || judges[3]?.judge_name || "Juri 4",
-      ];
-
       // 2. Prepare participant mappings
       const mappedParticipants: ParticipantMapping[] = participants.map((p) => {
         const num = p.gantangan_number || 1;
@@ -219,11 +216,11 @@
       roundStore.setCloudRound({
         eventId: selectedEvent?.id || selectedRound.event_id || "",
         roundId: selectedRound.id,
-        eventName: selectedEvent?.title || selectedRound.event_title || roundStore.eventName,
+        eventName: selectedEvent?.title || selectedRound.event_title || "",
         sessionName: selectedRound.title || `Sesi ${selectedRound.round_number}`,
-        startTime: selectedRound.start_time || roundStore.startTime,
-        endTime: selectedRound.end_time || roundStore.endTime,
-        jurors: formattedJurors,
+        startTime: selectedRound.start_time || "",
+        endTime: selectedRound.end_time || "",
+        jurors: roundJurors,
         participants: mappedParticipants,
       });
 
@@ -296,7 +293,7 @@
             <AlertCircle class="h-4 w-4 shrink-0" />
             <span class="flex-1">{error}</span>
             {#if signInRequired}
-              <Button size="sm" variant="outline" onclick={() => { onClose(); auth.logout(); }}>Masuk kembali</Button>
+              <Button size="sm" variant="outline" onclick={() => { onClose(); roundStore.clearCloudRound(); auth.logout(); }}>Masuk kembali</Button>
             {/if}
           </div>
         {/if}
@@ -375,7 +372,7 @@
             {#if selectedRound}
               <div class="text-[11px] text-muted-foreground flex items-center gap-2 pt-0.5">
                 <Clock class="h-3 w-3" />
-                <span>Jadwal: {selectedRound.start_time || "10:00"} – {selectedRound.end_time || "10:10 WIB"}</span>
+                <span>Jadwal: {selectedRound.start_time || "—"} – {selectedRound.end_time || "—"}</span>
                 <span>·</span>
                 <span class="text-emerald-400 font-semibold">{participants.length} Gantangan Terisi</span>
               </div>
@@ -407,19 +404,19 @@
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div class="rounded-lg border border-border bg-card p-2 text-xs">
                   <div class="text-[9px] text-muted-foreground font-bold">JURI 1 (BLOK A)</div>
-                  <div class="font-bold text-foreground truncate">{selectedRound.field_judge_1 || judges[0]?.judge_name || "Juri 1"}</div>
+                  <div class="font-bold text-foreground truncate">{roundJurors[0] || "—"}</div>
                 </div>
                 <div class="rounded-lg border border-border bg-card p-2 text-xs">
                   <div class="text-[9px] text-muted-foreground font-bold">JURI 2 (BLOK B)</div>
-                  <div class="font-bold text-foreground truncate">{selectedRound.field_judge_2 || judges[1]?.judge_name || "Juri 2"}</div>
+                  <div class="font-bold text-foreground truncate">{roundJurors[1] || "—"}</div>
                 </div>
                 <div class="rounded-lg border border-border bg-card p-2 text-xs">
                   <div class="text-[9px] text-muted-foreground font-bold">JURI 3 (BLOK C)</div>
-                  <div class="font-bold text-foreground truncate">{selectedRound.field_judge_3 || judges[2]?.judge_name || "Juri 3"}</div>
+                  <div class="font-bold text-foreground truncate">{roundJurors[2] || "—"}</div>
                 </div>
                 <div class="rounded-lg border border-border bg-card p-2 text-xs">
                   <div class="text-[9px] text-muted-foreground font-bold">JURI 4 (BLOK D)</div>
-                  <div class="font-bold text-foreground truncate">{selectedRound.field_judge_4 || judges[3]?.judge_name || "Juri 4"}</div>
+                  <div class="font-bold text-foreground truncate">{roundJurors[3] || "—"}</div>
                 </div>
               </div>
             </div>
@@ -503,7 +500,8 @@
           <Button
             size="sm"
             onclick={handleApplyToLivestream}
-            disabled={binding || loading || !!error || !selectedRound}
+            disabled={binding || loading || !!error || !selectedRound || roundStore.state === "RUNNING"}
+            title={roundStore.state === "RUNNING" ? "Hentikan ronde aktif sebelum mengganti sesi" : undefined}
             class="gap-2 text-xs font-bold bg-primary text-black hover:bg-primary/90"
           >
             {#if binding}

@@ -19,13 +19,16 @@
   import LoginPage from "$lib/components/auth/login-page.svelte";
   import OperatorDashboard from "$lib/components/operator/operator-dashboard.svelte";
   import ZoneGrid3x2 from "$lib/components/cameras/zone-grid-3x2.svelte";
-  import { api } from "$lib/services/api";
+  import { api, message } from "$lib/services/api";
   import { engine } from "$lib/state/engine.svelte";
   import { auth } from "$lib/state/auth.svelte";
+  import { roundStore } from "$lib/state/round.svelte";
 
   let tab = $state("operator");
   let sidebarOpen = $state(true);
   let noticeDismissed = $state(false);
+  let checkingCloudSession = $state(true);
+  let cloudSessionError = $state("");
 
   function toggleSidebar() {
     sidebarOpen = !sidebarOpen;
@@ -56,6 +59,7 @@
   onMount(() => {
     const off = engine.listen();
     void engine.connect();
+    void verifyCloudSession();
     let pending = false;
     const timer = setInterval(async () => {
       if (pending) return;
@@ -72,6 +76,22 @@
     };
   });
 
+  async function verifyCloudSession() {
+    try {
+      if (!auth.isLoggedIn) return;
+      const profile = await api.cloud("/auth/me");
+      if (!profile?.id || (auth.userEmail && String(profile.email || "").toLowerCase() !== auth.userEmail.toLowerCase())) {
+        throw Error("Identitas akun cloud berubah. Silakan masuk kembali.");
+      }
+    } catch (error) {
+      cloudSessionError = message(error);
+      roundStore.clearCloudRound();
+      auth.logout();
+    } finally {
+      checkingCloudSession = false;
+    }
+  }
+
   async function navigate(id: string) {
     if ((tab === "cameras" || tab === "operator") && id !== tab) {
       await api.hidePlayers();
@@ -80,14 +100,18 @@
   }
 
   async function handleLogout() {
-    await api.hidePlayers();
+    await Promise.allSettled([api.hidePlayers(), api.logout()]);
+    cloudSessionError = "";
+    roundStore.clearCloudRound();
     auth.logout();
   }
 </script>
 
-{#if !auth.isLoggedIn}
+{#if checkingCloudSession}
+  <div class="grid h-screen place-items-center bg-background text-sm text-muted-foreground" role="status">Memeriksa sesi cloud…</div>
+{:else if !auth.isLoggedIn}
   <!-- Fullscreen Login Page -->
-  <LoginPage />
+  <LoginPage sessionError={cloudSessionError} />
 {:else if auth.role === "juri"}
   <!-- Layar penilaian juri -->
   <div class="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground select-none">

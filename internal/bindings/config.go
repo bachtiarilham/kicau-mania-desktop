@@ -7,7 +7,13 @@ func (d *Desktop) GetConfig() configModel.Config {
 }
 
 func (d *Desktop) SaveConfig(cfg configModel.Config) error {
-	return d.container.ConfigUC.SaveConfig(cfg)
+	if err := d.container.ConfigUC.SaveConfig(cfg); err != nil {
+		return err
+	}
+	if d.container.Cloud != nil {
+		d.container.Cloud.UseBase(cfg.CloudURL)
+	}
+	return nil
 }
 
 func (d *Desktop) Preferences() string {

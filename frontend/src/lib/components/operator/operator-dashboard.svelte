@@ -13,7 +13,7 @@
   import { engine } from "$lib/state/engine.svelte";
   import { api } from "$lib/services/api";
   import { MOCK_GANTANGAN_STREAMS } from "$lib/services/livestream.mock";
-  import type { RoundConfig, ZoneId } from "$lib/models";
+  import type { ZoneId } from "$lib/models";
 
   let selectedFilter = $state<"all" | ZoneId>("all");
   let spotlightId = $state<string | null>(null);
@@ -95,11 +95,6 @@
   function closeEditModal() {
     showEditModal = false;
     engine.overlay = false;
-  }
-
-  function handleSaveConfig(cfg: RoundConfig) {
-    roundStore.updateConfig(cfg);
-    closeEditModal();
   }
 
   async function openCloudModal() {
@@ -241,10 +236,11 @@
   </main>
 </div>
 
-<!-- Modal Edit Konfigurasi Lomba & Juri -->
+<!-- Konfigurasi lomba dari sesi cloud -->
 <RoundConfigModal
   open={showEditModal}
   initialConfig={{
+    roundId: roundStore.roundId,
     eventName: roundStore.eventName,
     sessionName: roundStore.sessionName,
     startTime: roundStore.startTime,
@@ -254,7 +250,6 @@
     jurors: roundStore.jurors,
   }}
   onClose={closeEditModal}
-  onSave={handleSaveConfig}
 />
 
 <!-- Dialog Keputusan Waktu Habis: Lanjutkan atau Stop -->

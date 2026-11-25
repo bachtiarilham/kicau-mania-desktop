@@ -3,12 +3,13 @@ import { roundStore, getJudgeAssignedZone } from "./round.svelte";
 
 describe("roundStore and judge rotation matrix", () => {
   beforeEach(() => {
-    roundStore.resetRound();
-    roundStore.updateConfig({
+    roundStore.setCloudRound({
+      eventId: "event-1",
+      roundId: "round-1",
       eventName: "Piala Umi Kasum",
       sessionName: "Sesi 1",
-      totalDurationSeconds: 600,
-      shiftDurationSeconds: 150,
+      startTime: "10:00",
+      endTime: "10:10",
       jurors: ["Juri 1", "Juri 2", "Juri 3", "Juri 4"],
     });
   });
@@ -51,18 +52,22 @@ describe("roundStore and judge rotation matrix", () => {
     expect(getJudgeAssignedZone(3, 4)).toBe("C");
   });
 
-  it("updates config dynamically", () => {
-    roundStore.updateConfig({
+  it("replaces cloud round configuration, including any missing judges", () => {
+    roundStore.setCloudRound({
+      eventId: "event-2",
+      roundId: "round-2",
       eventName: "Piala Presiden 2026",
       sessionName: "Sesi 2",
-      totalDurationSeconds: 600,
-      shiftDurationSeconds: 150,
+      startTime: "23:50",
+      endTime: "00:10",
+      jurors: [],
     });
     expect(roundStore.eventName).toBe("Piala Presiden 2026");
     expect(roundStore.sessionName).toBe("Sesi 2");
-    expect(roundStore.totalDurationSeconds).toBe(600);
-    expect(roundStore.roundRemainingSeconds).toBe(600);
-    expect(roundStore.shiftDurationSeconds).toBe(150);
+    expect(roundStore.totalDurationSeconds).toBe(1200);
+    expect(roundStore.roundRemainingSeconds).toBe(1200);
+    expect(roundStore.shiftDurationSeconds).toBe(300);
+    expect(roundStore.jurors).toEqual([]);
   });
 
   it("starts and stops round", () => {

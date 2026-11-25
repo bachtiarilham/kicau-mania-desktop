@@ -12,7 +12,11 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import { auth, type UserRole } from "$lib/state/auth.svelte";
+  import { roundStore } from "$lib/state/round.svelte";
   import { api, message } from "$lib/services/api";
+
+  let { sessionError = "" }: { sessionError?: string } = $props();
+  let dismissSessionError = $state(false);
 
   let email = $state("");
   let password = $state("");
@@ -70,6 +74,7 @@
 
   async function handleFormSubmit(e: Event) {
     e.preventDefault();
+    dismissSessionError = true;
     if (!email.trim() || !password) {
       error = "Silakan masukkan email dan kata sandi.";
       return;
@@ -86,7 +91,8 @@
       const arenaRoles: string[] = Array.isArray(profile?.arena_roles)
         ? profile.arena_roles.map((r: any) => String(r?.role || "").toUpperCase())
         : [];
-      const allRoles = [...roles, ...arenaRoles];
+      const activeRole = String(profile?.active_scope?.role || "").toUpperCase();
+      const allRoles = activeRole ? [activeRole] : [...roles, ...arenaRoles];
 
       if (allRoles.includes("ADMIN")) {
         role = "admin";
@@ -98,6 +104,7 @@
 
       const userName = profile?.name || profile?.nickname || "";
       const arenaId = profile?.active_scope?.arena_id || profile?.arena_roles?.[0]?.arena_id || profile?.arena_id || "";
+      roundStore.clearCloudRound();
       auth.login(role, profile?.email || email.trim(), userName, undefined, arenaId);
     } catch (err: any) {
       error = message(err) || "Gagal terhubung ke server atau kredensial salah.";
@@ -155,10 +162,10 @@
         </div>
       </div>
 
-      {#if error}
+      {#if error || (!dismissSessionError && sessionError)}
         <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/15 p-3 text-xs text-red-400">
           <AlertCircle class="h-4 w-4 shrink-0 text-red-400" />
-          <span>{error}</span>
+          <span>{error || sessionError}</span>
         </div>
       {/if}
 

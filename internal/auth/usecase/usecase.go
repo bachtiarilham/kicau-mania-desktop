@@ -28,6 +28,14 @@ func (u *usecase) Login(ctx context.Context, email, password string) (map[string
 		r := strings.ToUpper(role)
 		return r == "ADMIN" || r == "OPERATOR" || r == "JUDGE" || r == "JURI"
 	}
+	if scope, ok := profile["active_scope"].(map[string]any); ok {
+		role, _ := scope["role"].(string)
+		if !isRoleAllowed(role) {
+			_ = u.cloud.Logout(ctx)
+			return nil, errors.New("Scope cloud aktif tidak diizinkan untuk desktop")
+		}
+		return profile, nil
+	}
 	if roles, ok := profile["roles"].([]any); ok {
 		for _, role := range roles {
 			if rStr, ok := role.(string); ok && isRoleAllowed(rStr) {

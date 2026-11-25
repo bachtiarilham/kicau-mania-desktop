@@ -42,6 +42,40 @@ func TestCloudReadRequiresSignInWhenRefreshIsRejected(t *testing.T) {
 	}
 }
 
+func TestLoginDoesNotPersistTokensRejectedByProfile(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/auth/login":
+			_, _ = w.Write([]byte(`{"success":true,"data":{"pre_auth_token":"challenge","accessible_scopes":[{"scope_id":"arena:one:PESERTA","role":"PESERTA","arena_id":"one"},{"scope_id":"global:ADMIN","role":"ADMIN"}]}}`))
+		case "/api/v1/auth/select-scope":
+			var input map[string]string
+			if err := json.NewDecoder(r.Body).Decode(&input); err != nil || input["scope_id"] != "global:ADMIN" {
+				t.Errorf("login did not select a desktop scope: %v", err)
+			}
+			_, _ = w.Write([]byte(`{"success":true,"data":{"access_token":"candidate","refresh_token":"refresh","expires_in":900}}`))
+		case "/api/v1/auth/me":
+			if r.Header.Get("Authorization") != "Bearer candidate" {
+				t.Error("profile was not verified with the candidate token")
+			}
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"success":false,"message":"authentication required"}`))
+		default:
+			t.Errorf("unexpected request: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+	store := &repository.Store{Dir: t.TempDir()}
+	client := New(server.URL, store)
+	if profile, err := client.Login(context.Background(), "operator@example.test", "password"); err == nil || profile != nil {
+		t.Fatal("login succeeded with an unusable access token")
+	}
+	reopened := New(server.URL, store)
+	if client.session.Access != "" || reopened.session.Access != "" || reopened.session.Refresh != "" {
+		t.Fatal("rejected credentials remained active or were persisted")
+	}
+}
+
 func TestOpaqueSessionRefreshLogoutAndOriginIsolation(t *testing.T) {
 	refreshes := 0
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

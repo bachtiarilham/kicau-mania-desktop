@@ -53,11 +53,16 @@ func ID() string {
 	return s[:8] + "-" + s[8:12] + "-" + s[12:16] + "-" + s[16:20] + "-" + s[20:]
 }
 
-func New(base string, store config.ConfigStore) *Client {
+func normalizeBase(base string) string {
 	base = strings.TrimRight(base, "/")
 	if !strings.HasSuffix(base, "/api/v1") {
 		base += "/api/v1"
 	}
+	return base
+}
+
+func New(base string, store config.ConfigStore) *Client {
+	base = normalizeBase(base)
 	u, _ := url.Parse(base)
 	c := &Client{Base: base, Origin: u.Scheme + "://" + u.Host, store: store, http: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 	_ = store.Load("cloud-session.bin", &c.session, true)
@@ -68,6 +73,19 @@ func New(base string, store config.ConfigStore) *Client {
 		c.session.Device = ID()
 	}
 	return c
+}
+
+// UseBase switches the running client and prevents reuse of credentials on another host.
+func (c *Client) UseBase(base string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	base = normalizeBase(base)
+	if base == c.Base {
+		return
+	}
+	u, _ := url.Parse(base)
+	c.Base, c.Origin = base, u.Scheme+"://"+u.Host
+	c.session = Session{Base: base, Device: c.session.Device}
 }
 
 func (c *Client) raw(ctx context.Context, method, path string, body any, out any) (*http.Response, error) {
@@ -129,48 +147,42 @@ func (c *Client) raw(ctx context.Context, method, path string, body any, out any
 	return res, json.Unmarshal(env.Data, out)
 }
 
-func (c *Client) tokens(res *http.Response, v struct {
+type tokenResponse struct {
 	Access       string         `json:"access_token"`
 	RefreshToken string         `json:"refresh_token"`
 	Expires      int            `json:"expires_in"`
-	User         map[string]any `json:"user"`
-}) error {
+	ActiveScope  map[string]any `json:"active_scope"`
+}
+
+func (c *Client) tokenSession(res *http.Response, v tokenResponse) (Session, error) {
 	if v.Access == "" || v.Expires < 1 {
-		return errors.New("Token cloud tidak valid")
+		return Session{}, errors.New("Token cloud tidak valid")
 	}
-	found := false
+	next := Session{Base: c.Base, Device: c.session.Device, Access: v.Access,
+		Expires: time.Now().Add(time.Duration(v.Expires) * time.Second)}
 	for _, cookie := range res.Cookies() {
-		if cookie.Name == "__Host-kicau_refresh" || cookie.Name == "kicau_refresh" {
-			if cookie.Value != "" {
-				c.session.Refresh = cookie.Value
-				c.session.Cookie = cookie.Name
-				found = true
-			}
+		if (cookie.Name == "__Host-kicau_refresh" || cookie.Name == "kicau_refresh") && cookie.Value != "" {
+			next.Refresh, next.Cookie = cookie.Value, cookie.Name
+			break
 		}
 	}
-	if !found && v.RefreshToken != "" {
-		c.session.Refresh = v.RefreshToken
-		c.session.Cookie = "kicau_refresh"
-		found = true
+	if next.Refresh == "" && v.RefreshToken != "" {
+		next.Refresh, next.Cookie = v.RefreshToken, "kicau_refresh"
+		if c.session.Cookie != "" {
+			next.Cookie = c.session.Cookie
+		}
 	}
-	if !found {
-		return errors.New("Cloud tidak mengirim refresh cookie")
+	if next.Refresh == "" {
+		return Session{}, errors.New("Cloud tidak mengirim refresh cookie")
 	}
-	c.session.Access = v.Access
-	c.session.Expires = time.Now().Add(time.Duration(v.Expires) * time.Second)
-	return c.store.Save("cloud-session.bin", c.session, true)
+	return next, nil
 }
 
 func (c *Client) refresh(ctx context.Context) error {
 	if c.session.Refresh == "" {
 		return &Failure{http.StatusUnauthorized, signInRequired}
 	}
-	var v struct {
-		Access       string         `json:"access_token"`
-		RefreshToken string         `json:"refresh_token"`
-		Expires      int            `json:"expires_in"`
-		User         map[string]any `json:"user"`
-	}
+	var v tokenResponse
 	r, e := c.raw(ctx, "POST", "/auth/refresh", map[string]any{}, &v)
 	if e != nil {
 		var f *Failure
@@ -181,13 +193,19 @@ func (c *Client) refresh(ctx context.Context) error {
 		}
 		return e
 	}
-	return c.tokens(r, v)
+	next, err := c.tokenSession(r, v)
+	if err != nil {
+		return err
+	}
+	c.session = next
+	return c.store.Save("cloud-session.bin", next, true)
 }
 
 func (c *Client) Login(ctx context.Context, email, password string) (map[string]any, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var pre struct {
+		tokenResponse
 		PreAuthToken     string `json:"pre_auth_token"`
 		AccessibleScopes []struct {
 			ScopeID   string  `json:"scope_id"`
@@ -195,33 +213,31 @@ func (c *Client) Login(ctx context.Context, email, password string) (map[string]
 			ScopeType string  `json:"scope_type"`
 			ArenaID   *string `json:"arena_id"`
 		} `json:"accessible_scopes"`
-		Access       string         `json:"access_token"`
-		RefreshToken string         `json:"refresh_token"`
-		Expires      int            `json:"expires_in"`
-		User         map[string]any `json:"user"`
 	}
 	r, e := c.raw(ctx, "POST", "/auth/login", map[string]any{"email": email, "password": password, "device_id": c.session.Device}, &pre)
 	if e != nil {
 		return nil, e
 	}
-	var v struct {
-		Access       string         `json:"access_token"`
-		RefreshToken string         `json:"refresh_token"`
-		Expires      int            `json:"expires_in"`
-		ActiveScope  map[string]any `json:"active_scope"`
-		User         map[string]any `json:"user"`
-	}
+	v := pre.tokenResponse
 	if pre.PreAuthToken != "" {
-		if len(pre.AccessibleScopes) == 0 {
-			return nil, errors.New("Akun tidak memiliki akses role atau arena")
-		}
-		chosen := pre.AccessibleScopes[0].ScopeID
+		chosen := ""
 		for _, s := range pre.AccessibleScopes {
+			role := strings.ToUpper(s.Role)
+			if s.ScopeID == "" || (role != "ADMIN" && role != "OPERATOR" && role != "JUDGE" && role != "JURI") {
+				continue
+			}
+			if chosen == "" {
+				chosen = s.ScopeID
+			}
 			if s.ArenaID != nil && *s.ArenaID != "" {
 				chosen = s.ScopeID
 				break
 			}
 		}
+		if chosen == "" {
+			return nil, errors.New("Akun tidak memiliki akses Admin, Operator, atau Juri")
+		}
+		v = tokenResponse{}
 		r, e = c.raw(ctx, "POST", "/auth/select-scope", map[string]any{
 			"pre_auth_token": pre.PreAuthToken,
 			"scope_id":       chosen,
@@ -230,24 +246,34 @@ func (c *Client) Login(ctx context.Context, email, password string) (map[string]
 		if e != nil {
 			return nil, e
 		}
-	} else {
-		v.Access = pre.Access
-		v.RefreshToken = pre.RefreshToken
-		v.Expires = pre.Expires
-		v.User = pre.User
 	}
-	if e = c.tokens(r, struct {
-		Access       string         `json:"access_token"`
-		RefreshToken string         `json:"refresh_token"`
-		Expires      int            `json:"expires_in"`
-		User         map[string]any `json:"user"`
-	}{v.Access, v.RefreshToken, v.Expires, v.User}); e != nil {
+	next, e := c.tokenSession(r, v)
+	if e != nil {
 		return nil, e
 	}
-	if v.ActiveScope != nil && v.User != nil {
-		v.User["active_scope"] = v.ActiveScope
+	previous := c.session
+	c.session = next
+	var profile map[string]any
+	if _, e = c.raw(ctx, "GET", "/auth/me", nil, &profile); e != nil {
+		c.session = previous
+		var f *Failure
+		if errors.As(e, &f) && f.Status == http.StatusUnauthorized {
+			return nil, errors.New("Cloud menerima login, tetapi menolak token pada pemeriksaan sesi. Periksa deployment cloud-app.")
+		}
+		return nil, fmt.Errorf("Gagal memverifikasi sesi cloud: %w", e)
 	}
-	return v.User, nil
+	if id, _ := profile["id"].(string); id == "" {
+		c.session = previous
+		return nil, errors.New("Cloud tidak mengembalikan identitas pengguna")
+	}
+	if e = c.store.Save("cloud-session.bin", next, true); e != nil {
+		c.session = previous
+		return nil, e
+	}
+	if v.ActiveScope != nil {
+		profile["active_scope"] = v.ActiveScope
+	}
+	return profile, nil
 }
 
 func (c *Client) Call(ctx context.Context, method, path string, body, out any) error {

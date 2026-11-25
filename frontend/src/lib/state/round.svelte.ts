@@ -13,20 +13,31 @@ export function getJudgeAssignedZone(
   return zones[zoneIndex];
 }
 
-const STORAGE_KEY = "kicau_round_config_v2";
-const SYNC_CHANNEL = "kicau_round_sync_channel";
+const STORAGE_KEY = "kicau_cloud_round_v1";
+const SYNC_CHANNEL = "kicau_cloud_round_sync_v1";
+const defaultRoundDuration = 600;
+
+function scheduledSeconds(start: string, end: string) {
+  const parse = (time: string) => {
+    const match = time.trim().match(/^(\d{1,2})[:.](\d{2})(?::(\d{2}))?(?:\s*(?:WIB|WITA|WIT))?$/i);
+    if (!match) return null;
+    const [, h, m, s = "00"] = match;
+    if (+h >= 24 || +m >= 60 || +s >= 60) return null;
+    return +h * 3600 + +m * 60 + +s;
+  };
+  const from = parse(start);
+  const to = parse(end);
+  if (from === null || to === null) return defaultRoundDuration;
+  const duration = (to - from + 86400) % 86400;
+  return duration >= 4 ? duration : defaultRoundDuration;
+}
 
 class RoundStore {
-  eventName = $state("Piala Umi Kasum");
-  sessionName = $state("Sesi 1");
-  startTime = $state("10.00");
-  endTime = $state("10.10 WIB");
-  jurors = $state<string[]>([
-    "Juri 1: Axxx Bxxx",
-    "Juri 2: Cxxxx Dxxx",
-    "Juri 3: Zffgfg Hnnn",
-    "Juri 4: Ijdjff Jndd",
-  ]);
+  eventName = $state("");
+  sessionName = $state("");
+  startTime = $state("");
+  endTime = $state("");
+  jurors = $state<string[]>([]);
 
   eventId = $state("");
   roundId = $state("");
@@ -89,10 +100,10 @@ class RoundStore {
         sessionName: this.sessionName,
         startTime: this.startTime,
         endTime: this.endTime,
-        jurors: this.jurors,
+        jurors: $state.snapshot(this.jurors),
         eventId: this.eventId,
         roundId: this.roundId,
-        participants: this.participants,
+        participants: $state.snapshot(this.participants),
         totalDurationSeconds: this.totalDurationSeconds,
         shiftDurationSeconds: this.shiftDurationSeconds,
         roundRemainingSeconds: this.roundRemainingSeconds,
@@ -203,50 +214,27 @@ class RoundStore {
     this.sessionName = config.sessionName;
     this.startTime = config.startTime;
     this.endTime = config.endTime;
-    if (config.jurors && config.jurors.length > 0) {
-      this.jurors = [...config.jurors];
-    }
-    if (config.participants) {
-      this.participants = [...config.participants];
-    }
+    this.jurors = [...config.jurors];
+    this.participants = [...(config.participants ?? [])];
+    this.totalDurationSeconds = scheduledSeconds(config.startTime, config.endTime);
+    this.shiftDurationSeconds = Math.floor(this.totalDurationSeconds / 4);
     this.saveToStorage();
-    this.broadcast();
+    this.resetRound();
+  }
+
+  clearCloudRound() {
+    this.setCloudRound({
+      eventId: "", roundId: "", eventName: "", sessionName: "",
+      startTime: "", endTime: "", jurors: [],
+    });
   }
 
   getParticipantByGantangan(num: number): ParticipantMapping | undefined {
     return this.participants.find((p) => p.gantanganNumber === num);
   }
 
-  updateConfig(config: Partial<RoundConfig>) {
-    if (config.eventName !== undefined) this.eventName = config.eventName;
-    if (config.sessionName !== undefined) this.sessionName = config.sessionName;
-    if (config.startTime !== undefined) this.startTime = config.startTime;
-    if (config.endTime !== undefined) this.endTime = config.endTime;
-    if (config.jurors !== undefined) this.jurors = config.jurors;
-    if (config.totalDurationSeconds !== undefined) {
-      this.totalDurationSeconds = config.totalDurationSeconds;
-      if (this.state === "IDLE" || this.state === "FINISHED") {
-        this.roundRemainingSeconds = config.totalDurationSeconds;
-      }
-    }
-    if (config.shiftDurationSeconds !== undefined) {
-      this.shiftDurationSeconds = config.shiftDurationSeconds;
-      if (this.state === "IDLE" || this.state === "FINISHED") {
-        this.shiftRemainingSeconds = config.shiftDurationSeconds;
-      }
-    }
-    if (config.durationSeconds !== undefined && config.shiftDurationSeconds === undefined) {
-      this.shiftDurationSeconds = config.durationSeconds;
-      if (this.state === "IDLE" || this.state === "FINISHED") {
-        this.shiftRemainingSeconds = config.durationSeconds;
-      }
-    }
-    this.saveToStorage();
-    this.broadcast();
-  }
-
   async startRound() {
-    if (this.state === "RUNNING") return;
+    if (!this.roundId || this.state === "RUNNING") return;
 
     this.state = "RUNNING";
     this.rotationAlert = false;
@@ -363,7 +351,7 @@ class RoundStore {
         if (this.currentShift < 4) {
           // Advance to next shift
           this.currentShift += 1;
-          this.shiftRemainingSeconds = this.shiftDurationSeconds;
+          this.shiftRemainingSeconds = this.currentShift === 4 ? this.roundRemainingSeconds : this.shiftDurationSeconds;
           this.rotationAlert = true;
           // Auto-clear rotation alert after 10 seconds
           setTimeout(() => {

@@ -25,13 +25,6 @@
     onStopRound,
   }: Props = $props();
 
-  function setDurationPreset(totalSec: number) {
-    const shiftSec = Math.floor(totalSec / 4);
-    roundStore.updateConfig({
-      totalDurationSeconds: totalSec,
-      shiftDurationSeconds: shiftSec,
-    });
-  }
 </script>
 
 <section class="shrink-0 border-b border-border bg-card px-3 py-2 sm:px-4">
@@ -95,25 +88,12 @@
         class="h-7 border-border bg-accent text-xs text-foreground hover:bg-accent hover:text-foreground"
       >
         <Settings class="h-3 w-3" />
-        <span>Atur Lomba & Juri</span>
+        <span>Lihat Lomba & Juri</span>
       </Button>
     </div>
 
     <!-- Center & Right: Tactical Big START / STOP Buttons & Giant Timer -->
     <div class="flex flex-wrap items-center gap-3">
-      <!-- Duration Presets -->
-      <div class="hidden items-center gap-1 rounded-lg border border-border bg-muted p-0.5 xl:flex">
-        {#each [{ sec: 600, label: "10m (Std 600s)" }, { sec: 300, label: "5m" }, { sec: 150, label: "2.5m" }] as p}
-          <button
-            type="button"
-            onclick={() => setDurationPreset(p.sec)}
-            class="rounded px-2 py-0.5 font-mono text-[10px] font-semibold transition {roundStore.totalDurationSeconds === p.sec ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}"
-          >
-            {p.label}
-          </button>
-        {/each}
-      </div>
-
       <!-- Giant Synchronized Countdown Timer (Dual Reading: 10m Round & 150s Shift) -->
       <div
         class="flex items-center gap-2.5 rounded-xl border px-3 py-1 shadow-inner transition-all {roundStore.state === 'RUNNING' ? 'border-emerald-500/50 bg-emerald-500/15' : roundStore.roundRemainingSeconds === 0 ? 'border-red-500/80 bg-red-500/15 animate-pulse' : 'border-border bg-muted'}"
@@ -138,7 +118,7 @@
           type="button"
           onclick={() => roundStore.resetRound()}
           class="flex h-6 w-6 items-center justify-center rounded-lg bg-accent text-muted-foreground transition hover:bg-accent hover:text-foreground"
-          title="Reset timer ke awal (10 Menit / 600 Detik)"
+          title="Reset timer ke awal ronde"
         >
           <RotateCcw class="h-3 w-3" />
         </button>
@@ -148,7 +128,7 @@
       <div class="flex items-center gap-2">
         <button
           type="button"
-          disabled={roundStore.state === "RUNNING"}
+          disabled={!roundStore.roundId || roundStore.state === "RUNNING"}
           onclick={() => roundStore.startRound()}
           class="group relative flex h-10 items-center gap-2 rounded-full px-5 text-xs font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed {roundStore.state === 'RUNNING' ? 'bg-emerald-600/60 shadow-emerald-600/20' : 'bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 active:scale-95 shadow-emerald-500/30 hover:shadow-emerald-500/50'}"
         >
