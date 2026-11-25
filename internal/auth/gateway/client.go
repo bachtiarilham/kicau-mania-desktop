@@ -42,6 +42,8 @@ type Failure struct {
 
 func (e *Failure) Error() string { return e.Message }
 
+const signInRequired = "Sesi cloud tidak aktif. Silakan masuk kembali ke cloud."
+
 func ID() string {
 	var b [16]byte
 	_, _ = rand.Read(b[:])
@@ -157,7 +159,7 @@ func (c *Client) tokens(res *http.Response, v struct {
 
 func (c *Client) refresh(ctx context.Context) error {
 	if c.session.Refresh == "" {
-		return &Failure{401, "Silakan login ke cloud"}
+		return &Failure{http.StatusUnauthorized, signInRequired}
 	}
 	var v struct {
 		Access       string         `json:"access_token"`
@@ -168,10 +170,10 @@ func (c *Client) refresh(ctx context.Context) error {
 	r, e := c.raw(ctx, "POST", "/auth/refresh", map[string]any{}, &v)
 	if e != nil {
 		var f *Failure
-		if errors.As(e, &f) && f.Status == 401 {
-			c.session.Access = ""
-			c.session.Refresh = ""
+		if errors.As(e, &f) && f.Status == http.StatusUnauthorized {
+			c.session = Session{Base: c.Base, Device: c.session.Device}
 			_ = c.store.Save("cloud-session.bin", c.session, true)
+			return &Failure{http.StatusUnauthorized, signInRequired}
 		}
 		return e
 	}
@@ -207,9 +209,13 @@ func (c *Client) Call(ctx context.Context, method, path string, body, out any) e
 	}
 	_, e := c.raw(ctx, method, path, body, out)
 	var f *Failure
-	if errors.As(e, &f) && f.Status == 401 {
-		if e = c.refresh(ctx); e == nil {
-			_, e = c.raw(ctx, method, path, body, out)
+	if errors.As(e, &f) && f.Status == http.StatusUnauthorized {
+		if e = c.refresh(ctx); e != nil {
+			return e
+		}
+		_, e = c.raw(ctx, method, path, body, out)
+		if errors.As(e, &f) && f.Status == http.StatusUnauthorized {
+			return &Failure{http.StatusUnauthorized, signInRequired}
 		}
 	}
 	return e

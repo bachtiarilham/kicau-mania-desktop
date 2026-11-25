@@ -70,9 +70,7 @@ class AuthStore {
     this.role = role;
     this.userEmail = email || (role === "juri" ? "juri@kicaumania.com" : role === "operator" ? "operator@kicaumania.com" : "admin@kicaumania.com");
     this.userName = name || (role === "juri" ? "Dewan Juri Arena" : role === "operator" ? "Operator Arena" : "Administrator");
-    if (arenaId) {
-      this.arenaId = arenaId;
-    }
+    this.arenaId = arenaId || "";
 
     if (typeof judgeIdx === "number") {
       this.judgeIndex = Math.max(0, Math.min(3, judgeIdx));

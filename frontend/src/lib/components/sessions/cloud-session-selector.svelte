@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { untrack } from "svelte";
   import {
     Cloud,
     Calendar,
@@ -27,6 +27,7 @@
 
   let loading = $state(false);
   let error = $state("");
+  let signInRequired = $state(false);
   let success = $state("");
 
   let arenas = $state<any[]>([]);
@@ -51,43 +52,46 @@
     if (open) {
       error = "";
       success = "";
-      selectedArenaId = auth.arenaId || "";
-      initData();
+      selectedArenaId = untrack(() => auth.arenaId || "");
+      untrack(() => void initData());
     }
   });
+
+  function showLoadError(stage: string, cause: unknown) {
+    const detail = message(cause);
+    signInRequired = /sesi cloud tidak aktif|login ke cloud|authentication required/i.test(detail);
+    error = signInRequired
+      ? "Sesi cloud tidak aktif. Masuk kembali dengan akun yang terdaftar di server cloud."
+      : stage + ": " + detail;
+  }
 
   async function initData() {
     loading = true;
     error = "";
-    let arenaFetchError = "";
+    signInRequired = false;
+    events = [];
+    rounds = [];
+    selectedEventId = "";
+    selectedRoundId = "";
+    participants = [];
+    judges = [];
     try {
       if (!selectedArenaId) {
-        try {
-          const arenaRes = await api.cloud<any>("/arenas?limit=50");
-          arenas = Array.isArray(arenaRes?.items) ? arenaRes.items : [];
-          if (arenas.length > 0) {
-            selectedArenaId = arenas[0].id;
-            auth.setArenaId(selectedArenaId);
-          }
-        } catch (err: any) {
-          arenaFetchError = message(err);
+        const arenaRes = await api.cloud<any>("/arenas?limit=50");
+        arenas = Array.isArray(arenaRes?.items) ? arenaRes.items : [];
+        if (arenas.length > 0) {
+          selectedArenaId = arenas[0].id;
+          auth.setArenaId(selectedArenaId);
         }
       }
 
       if (selectedArenaId) {
         await loadEvents(selectedArenaId);
-      } else if (arenaFetchError) {
-        if (arenaFetchError.toLowerCase().includes("login ke cloud")) {
-          error =
-            "Sesi Cloud belum aktif (sedang menggunakan mode login offline). Silakan Logout lalu login menggunakan akun Cloud (contoh: operator.a@mock.kicau.test / admin@mock.kicau.test).";
-        } else {
-          error = "Gagal mengambil daftar Arena dari Cloud: " + arenaFetchError;
-        }
       } else {
         error = "Arena belum ditentukan. Pastikan akun memiliki akses ke Arena lomba.";
       }
     } catch (err: any) {
-      error = message(err) || "Gagal memuat data dari cloud server.";
+      showLoadError("Gagal memuat arena", err);
     } finally {
       loading = false;
     }
@@ -109,7 +113,7 @@
         judges = [];
       }
     } catch (err: any) {
-      error = "Gagal memuat jadwal event: " + message(err);
+      showLoadError("Gagal memuat jadwal event", err);
     } finally {
       loading = false;
     }
@@ -118,6 +122,11 @@
   async function loadRounds(arenaId: string, eventId: string) {
     loading = true;
     error = "";
+    signInRequired = false;
+    rounds = [];
+    selectedRoundId = "";
+    participants = [];
+    judges = [];
     try {
       const res = await api.cloud<any>(`/arenas/${arenaId}/rounds?limit=50`);
       const allRounds = Array.isArray(res?.items) ? res.items : [];
@@ -132,7 +141,7 @@
         judges = [];
       }
     } catch (err: any) {
-      error = "Gagal memuat daftar ronde/sesi: " + message(err);
+      showLoadError("Gagal memuat daftar ronde", err);
     } finally {
       loading = false;
     }
@@ -141,11 +150,17 @@
   async function loadRoundDetails(arenaId: string, roundId: string) {
     loading = true;
     error = "";
+    signInRequired = false;
+    participants = [];
+    judges = [];
     try {
       const [partsRes, judgesRes] = await Promise.allSettled([
         api.cloud<any[]>(`/arenas/${arenaId}/rounds/${roundId}/participants`),
         api.cloud<any[]>(`/arenas/${arenaId}/rounds/${roundId}/judges`),
       ]);
+
+      const failed = [partsRes, judgesRes].find((result) => result.status === "rejected");
+      if (failed?.status === "rejected") showLoadError("Gagal memuat detail ronde", failed.reason);
 
       if (partsRes.status === "fulfilled" && Array.isArray(partsRes.value)) {
         participants = partsRes.value.sort(
@@ -161,7 +176,7 @@
         judges = [];
       }
     } catch (err: any) {
-      error = "Gagal memuat detail peserta ronde: " + message(err);
+      showLoadError("Gagal memuat detail ronde", err);
     } finally {
       loading = false;
     }
@@ -279,7 +294,10 @@
         {#if error}
           <div class="flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-400">
             <AlertCircle class="h-4 w-4 shrink-0" />
-            <span>{error}</span>
+            <span class="flex-1">{error}</span>
+            {#if signInRequired}
+              <Button size="sm" variant="outline" onclick={() => { onClose(); auth.logout(); }}>Masuk kembali</Button>
+            {/if}
           </div>
         {/if}
 
@@ -485,7 +503,7 @@
           <Button
             size="sm"
             onclick={handleApplyToLivestream}
-            disabled={binding || !selectedRound}
+            disabled={binding || loading || !!error || !selectedRound}
             class="gap-2 text-xs font-bold bg-primary text-black hover:bg-primary/90"
           >
             {#if binding}

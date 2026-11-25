@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +11,36 @@ import (
 
 	"kicau.desktop/cctv/internal/config/repository"
 )
+
+func TestCloudReadRequiresSignInWhenRefreshIsRejected(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/auth/refresh" {
+			t.Errorf("unexpected request: %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"success":false,"message":"invalid refresh token"}`))
+	}))
+	defer server.Close()
+	store := &repository.Store{Dir: t.TempDir()}
+	client := New(server.URL, store)
+	client.session.Refresh = "expired-refresh"
+	client.session.Cookie = "kicau_refresh"
+	client.session.Device = "existing-device"
+	assertSignIn := func() {
+		t.Helper()
+		var failure *Failure
+		err := client.Call(context.Background(), "GET", "/arenas?limit=50", nil, nil)
+		if !errors.As(err, &failure) || failure.Status != http.StatusUnauthorized || failure.Message != signInRequired {
+			t.Fatalf("expected sign-in failure, got %v", err)
+		}
+	}
+	assertSignIn()
+	assertSignIn()
+	reopened := New(server.URL, store)
+	if reopened.session.Refresh != "" || reopened.session.Device != "existing-device" {
+		t.Fatal("stored session should retain the device and clear the rejected token")
+	}
+}
 
 func TestOpaqueSessionRefreshLogoutAndOriginIsolation(t *testing.T) {
 	refreshes := 0
