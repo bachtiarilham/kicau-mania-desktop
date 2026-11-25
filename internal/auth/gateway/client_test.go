@@ -47,7 +47,16 @@ func TestOpaqueSessionRefreshLogoutAndOriginIsolation(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		data := any(map[string]any{"id": "user", "name": "Petugas"})
-		if r.URL.Path == "/api/v1/auth/login" || r.URL.Path == "/api/v1/auth/refresh" {
+		if r.URL.Path == "/api/v1/auth/login" {
+			data = map[string]any{
+				"pre_auth_token": "pre-auth-secret",
+				"token_type":     "PRE_AUTH",
+				"expires_in":     300,
+				"accessible_scopes": []any{
+					map[string]any{"scope_id": "arena:arena-1:OPERATOR", "role": "OPERATOR", "scope_type": "ARENA", "arena_id": "arena-1"},
+				},
+			}
+		} else if r.URL.Path == "/api/v1/auth/select-scope" || r.URL.Path == "/api/v1/auth/refresh" {
 			if r.Header.Get("Origin") == "" {
 				t.Error("native origin missing")
 			}

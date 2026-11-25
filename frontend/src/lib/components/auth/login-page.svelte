@@ -97,7 +97,7 @@
       }
 
       const userName = profile?.name || profile?.nickname || "";
-      const arenaId = profile?.arena_roles?.[0]?.arena_id || profile?.arena_id || "";
+      const arenaId = profile?.active_scope?.arena_id || profile?.arena_roles?.[0]?.arena_id || profile?.arena_id || "";
       auth.login(role, profile?.email || email.trim(), userName, undefined, arenaId);
     } catch (err: any) {
       error = message(err) || "Gagal terhubung ke server atau kredensial salah.";

@@ -89,6 +89,10 @@ func (c *Client) raw(ctx context.Context, method, path string, body any, out any
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Origin", c.Origin)
 	req.Header.Set("User-Agent", "KicauManiaDesktop/1.0")
+	if c.session.Device != "" {
+		req.Header.Set("X-Device-ID", c.session.Device)
+		req.Header.Set("X-Device-Name", "KicauManiaDesktop")
+	}
 	if raw != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -183,18 +187,65 @@ func (c *Client) refresh(ctx context.Context) error {
 func (c *Client) Login(ctx context.Context, email, password string) (map[string]any, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	var v struct {
+	var pre struct {
+		PreAuthToken     string `json:"pre_auth_token"`
+		AccessibleScopes []struct {
+			ScopeID   string  `json:"scope_id"`
+			Role      string  `json:"role"`
+			ScopeType string  `json:"scope_type"`
+			ArenaID   *string `json:"arena_id"`
+		} `json:"accessible_scopes"`
 		Access       string         `json:"access_token"`
 		RefreshToken string         `json:"refresh_token"`
 		Expires      int            `json:"expires_in"`
 		User         map[string]any `json:"user"`
 	}
-	r, e := c.raw(ctx, "POST", "/auth/login", map[string]any{"email": email, "password": password, "device_id": c.session.Device}, &v)
+	r, e := c.raw(ctx, "POST", "/auth/login", map[string]any{"email": email, "password": password, "device_id": c.session.Device}, &pre)
 	if e != nil {
 		return nil, e
 	}
-	if e = c.tokens(r, v); e != nil {
+	var v struct {
+		Access       string         `json:"access_token"`
+		RefreshToken string         `json:"refresh_token"`
+		Expires      int            `json:"expires_in"`
+		ActiveScope  map[string]any `json:"active_scope"`
+		User         map[string]any `json:"user"`
+	}
+	if pre.PreAuthToken != "" {
+		if len(pre.AccessibleScopes) == 0 {
+			return nil, errors.New("Akun tidak memiliki akses role atau arena")
+		}
+		chosen := pre.AccessibleScopes[0].ScopeID
+		for _, s := range pre.AccessibleScopes {
+			if s.ArenaID != nil && *s.ArenaID != "" {
+				chosen = s.ScopeID
+				break
+			}
+		}
+		r, e = c.raw(ctx, "POST", "/auth/select-scope", map[string]any{
+			"pre_auth_token": pre.PreAuthToken,
+			"scope_id":       chosen,
+			"device_id":      c.session.Device,
+		}, &v)
+		if e != nil {
+			return nil, e
+		}
+	} else {
+		v.Access = pre.Access
+		v.RefreshToken = pre.RefreshToken
+		v.Expires = pre.Expires
+		v.User = pre.User
+	}
+	if e = c.tokens(r, struct {
+		Access       string         `json:"access_token"`
+		RefreshToken string         `json:"refresh_token"`
+		Expires      int            `json:"expires_in"`
+		User         map[string]any `json:"user"`
+	}{v.Access, v.RefreshToken, v.Expires, v.User}); e != nil {
 		return nil, e
+	}
+	if v.ActiveScope != nil && v.User != nil {
+		v.User["active_scope"] = v.ActiveScope
 	}
 	return v.User, nil
 }
