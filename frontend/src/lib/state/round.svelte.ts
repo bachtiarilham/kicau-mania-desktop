@@ -1,8 +1,21 @@
 import { engine } from "./engine.svelte";
 import { api } from "$lib/services/api";
-import type { ParticipantMapping, RoundConfig, RoundState, ZoneId } from "$lib/models";
+import type {
+  JudgeZoneScheduleItem,
+  ParticipantMapping,
+  RoundConfig,
+  RoundState,
+  ZoneId,
+} from "$lib/models";
 
-export type { ParticipantMapping, RoundConfig, RoundState, ZoneId };
+export type { JudgeZoneScheduleItem, ParticipantMapping, RoundConfig, RoundState, ZoneId };
+
+const ZONE_RANGES: Record<ZoneId, string> = {
+  A: "G01 – G06",
+  B: "G07 – G12",
+  C: "G13 – G18",
+  D: "G19 – G24",
+};
 
 export function getJudgeAssignedZone(
   judgeIndex: number,
@@ -11,6 +24,48 @@ export function getJudgeAssignedZone(
   const zones: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
   const zoneIndex = (((judgeIndex % 4) + (Math.max(1, currentShift) - 1)) % 4 + 4) % 4;
   return zones[zoneIndex];
+}
+
+function parseClockSeconds(raw: string): number {
+  const match = raw.trim().match(/^(\d{1,2})[:.](\d{2})(?::(\d{2}))?/);
+  if (!match) return 9 * 3600;
+  const h = Number(match[1]);
+  const m = Number(match[2]);
+  const s = Number(match[3] || "0");
+  if (h >= 24 || m >= 60 || s >= 60) return 9 * 3600;
+  return h * 3600 + m * 60 + s;
+}
+
+function formatClock(totalSeconds: number): string {
+  const normalized = ((totalSeconds % 86400) + 86400) % 86400;
+  const h = Math.floor(normalized / 3600);
+  const m = Math.floor((normalized % 3600) / 60);
+  const s = normalized % 60;
+  const base = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return s === 0 ? base : `${base}:${String(s).padStart(2, "0")}`;
+}
+
+export function getJudgeRotationSchedule(
+  judgeIndex: number,
+  startTime = "",
+  shiftDurationSeconds = 150
+): JudgeZoneScheduleItem[] {
+  const baseSeconds = parseClockSeconds(startTime || "09:00");
+  const step = Math.max(1, shiftDurationSeconds || 150);
+  const items: JudgeZoneScheduleItem[] = [];
+  for (let shift = 1; shift <= 4; shift++) {
+    const zone = getJudgeAssignedZone(judgeIndex, shift);
+    const fromSec = baseSeconds + (shift - 1) * step;
+    const toSec = baseSeconds + shift * step;
+    items.push({
+      shift,
+      zone,
+      range: ZONE_RANGES[zone],
+      startClock: formatClock(fromSec),
+      endClock: formatClock(toSec),
+    });
+  }
+  return items;
 }
 
 const STORAGE_KEY = "kicau_cloud_round_v1";
@@ -54,6 +109,8 @@ class RoundStore {
   rotationAlert = $state(false);
   timeUpDialog = $state(false);
   overtimeSeconds = $state(0);
+  checkedGantangan = $state<Record<string, Record<number, boolean>>>({});
+  judgeZoneChecks = $state<Record<string, Record<string, boolean>>>({});
 
   // Backward-compatibility properties for existing components/tests
   get durationSeconds(): number {
@@ -114,6 +171,8 @@ class RoundStore {
         timeUpDialog: this.timeUpDialog,
         overtimeSeconds: this.overtimeSeconds,
         startedAt: this.startedAt,
+        checkedGantangan: $state.snapshot(this.checkedGantangan),
+        judgeZoneChecks: $state.snapshot(this.judgeZoneChecks),
       },
     });
   }
@@ -138,6 +197,8 @@ class RoundStore {
     this.timeUpDialog = payload.timeUpDialog ?? this.timeUpDialog;
     this.overtimeSeconds = payload.overtimeSeconds ?? this.overtimeSeconds;
     this.startedAt = payload.startedAt ?? this.startedAt;
+    if (payload.checkedGantangan) this.checkedGantangan = payload.checkedGantangan;
+    if (payload.judgeZoneChecks) this.judgeZoneChecks = payload.judgeZoneChecks;
 
     if (this.state === "RUNNING" && !this.timerInterval) {
       this.startLocalTicker();
@@ -163,6 +224,8 @@ class RoundStore {
           participants: this.participants,
           totalDurationSeconds: this.totalDurationSeconds,
           shiftDurationSeconds: this.shiftDurationSeconds,
+          checkedGantangan: $state.snapshot(this.checkedGantangan),
+          judgeZoneChecks: $state.snapshot(this.judgeZoneChecks),
         })
       );
     } catch {
@@ -191,6 +254,12 @@ class RoundStore {
         if (typeof parsed.shiftDurationSeconds === "number") {
           this.shiftDurationSeconds = parsed.shiftDurationSeconds;
           this.shiftRemainingSeconds = parsed.shiftDurationSeconds;
+        }
+        if (parsed.checkedGantangan && typeof parsed.checkedGantangan === "object") {
+          this.checkedGantangan = parsed.checkedGantangan;
+        }
+        if (parsed.judgeZoneChecks && typeof parsed.judgeZoneChecks === "object") {
+          this.judgeZoneChecks = parsed.judgeZoneChecks;
         }
       }
     } catch {
@@ -231,6 +300,50 @@ class RoundStore {
 
   getParticipantByGantangan(num: number): ParticipantMapping | undefined {
     return this.participants.find((p) => p.gantanganNumber === num);
+  }
+
+  isGantanganChecked(roundId: string, num: number): boolean {
+    if (!roundId) return false;
+    return Boolean(this.checkedGantangan[roundId]?.[num]);
+  }
+
+  toggleGantanganCheck(roundId: string, num: number) {
+    if (!roundId) return;
+    const prev = this.checkedGantangan[roundId] ?? {};
+    this.checkedGantangan = {
+      ...this.checkedGantangan,
+      [roundId]: { ...prev, [num]: !prev[num] },
+    };
+    this.saveToStorage();
+    this.broadcast();
+  }
+
+  setAllGantanganChecks(roundId: string, nums: number[], checked: boolean) {
+    if (!roundId) return;
+    const next: Record<number, boolean> = { ...(this.checkedGantangan[roundId] ?? {}) };
+    for (const num of nums) {
+      next[num] = checked;
+    }
+    this.checkedGantangan = { ...this.checkedGantangan, [roundId]: next };
+    this.saveToStorage();
+    this.broadcast();
+  }
+
+  isJudgeZoneChecked(roundId: string, judgeIndex: number, zone: ZoneId): boolean {
+    const key = roundId || "default";
+    return Boolean(this.judgeZoneChecks[key]?.[`${judgeIndex}-${zone}`]);
+  }
+
+  toggleJudgeZoneCheck(roundId: string, judgeIndex: number, zone: ZoneId) {
+    const key = roundId || "default";
+    const prev = this.judgeZoneChecks[key] ?? {};
+    const slotKey = `${judgeIndex}-${zone}`;
+    this.judgeZoneChecks = {
+      ...this.judgeZoneChecks,
+      [key]: { ...prev, [slotKey]: !prev[slotKey] },
+    };
+    this.saveToStorage();
+    this.broadcast();
   }
 
   async startRound() {

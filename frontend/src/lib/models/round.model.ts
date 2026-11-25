@@ -13,6 +13,14 @@ export interface ParticipantMapping {
   channelId?: string;
 }
 
+export interface JudgeZoneScheduleItem {
+  shift: number;
+  zone: ZoneId;
+  range: string;
+  startClock: string;
+  endClock: string;
+}
+
 export interface RoundConfig {
   eventName: string;
   sessionName: string;

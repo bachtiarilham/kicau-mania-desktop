@@ -70,3 +70,16 @@ Dokumen ini mendefinisikan peta interaksi untuk layar monitor dewan juri (`ZoneG
 
 ### 6. Hasil yang Diharapkan
 - Grid 3x2 kamera otomatis memuat 6 kamera gantangan dari blok zona yang baru tanpa perlu refresh manual.
+
+---
+
+## Fitur 3.3: Checklist Penilaian per Zona & Jadwal Waktu Otomatis
+
+### 1. Nama & Fungsi Fitur
+- **Nama Fitur:** Judge Zone Checklist & Auto-Scheduled Shift Windows
+- **Fungsi:** Menampilkan daftar 4 zona penilaian (`A`, `B`, `C`, `D`) yang urutannya sudah ditentukan otomatis oleh sistem sesuai indeks juri (`J1–J4`), lengkap dengan rentang jam mulai–selesai tiap shift berdasarkan `startTime` ronde dan durasi shift.
+
+### 2. Interaksi yang Harus Dilakukan
+1. Juri melihat blok **Checklist Zona Anda** pada panel HUD di sisi kiri.
+2. Sistem otomatis menyorot zona yang sedang aktif beserta rentang waktunya (misal `13:00–13:02:30`).
+3. Juri dapat melakukan **check / uncheck** pada setiap zona yang telah selesai dinilai.

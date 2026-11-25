@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { roundStore, getJudgeAssignedZone } from "./round.svelte";
+import { roundStore, getJudgeAssignedZone, getJudgeRotationSchedule } from "./round.svelte";
 
 describe("roundStore and judge rotation matrix", () => {
   beforeEach(() => {
@@ -88,5 +88,32 @@ describe("roundStore and judge rotation matrix", () => {
     roundStore.continueRound(60);
     expect(roundStore.roundRemainingSeconds).toBe(60);
     expect(roundStore.timeUpDialog).toBe(false);
+  });
+
+  it("computes deterministic zone schedule with clock ranges for each judge", () => {
+    const j1 = getJudgeRotationSchedule(0, "13:00", 150);
+    expect(j1.map((s) => s.zone)).toEqual(["A", "B", "C", "D"]);
+    expect(j1[0].startClock).toBe("13:00");
+    expect(j1[0].endClock).toBe("13:02:30");
+    expect(j1[1].startClock).toBe("13:02:30");
+    expect(j1[1].endClock).toBe("13:05");
+
+    const j2 = getJudgeRotationSchedule(1, "13:00", 150);
+    expect(j2.map((s) => s.zone)).toEqual(["B", "C", "D", "A"]);
+  });
+
+  it("toggles gantangan and judge zone checklists persistently per round", () => {
+    expect(roundStore.isGantanganChecked("round-1", 5)).toBe(false);
+    roundStore.toggleGantanganCheck("round-1", 5);
+    expect(roundStore.isGantanganChecked("round-1", 5)).toBe(true);
+    roundStore.toggleGantanganCheck("round-1", 5);
+    expect(roundStore.isGantanganChecked("round-1", 5)).toBe(false);
+
+    roundStore.setAllGantanganChecks("round-1", [1, 2, 3], true);
+    expect(roundStore.isGantanganChecked("round-1", 2)).toBe(true);
+
+    expect(roundStore.isJudgeZoneChecked("round-1", 0, "A")).toBe(false);
+    roundStore.toggleJudgeZoneCheck("round-1", 0, "A");
+    expect(roundStore.isJudgeZoneChecked("round-1", 0, "A")).toBe(true);
   });
 });

@@ -9,6 +9,7 @@
     RefreshCw,
     LogOut,
     LayoutDashboard,
+    ClipboardCheck,
     PanelLeftClose,
     Menu,
   } from "@lucide/svelte";
@@ -18,6 +19,7 @@
   import SessionBar from "$lib/components/sessions/session-bar.svelte";
   import LoginPage from "$lib/components/auth/login-page.svelte";
   import OperatorDashboard from "$lib/components/operator/operator-dashboard.svelte";
+  import RoundChecklistPage from "$lib/components/checklist/round-checklist-page.svelte";
   import ZoneGrid3x2 from "$lib/components/cameras/zone-grid-3x2.svelte";
   import { api, message } from "$lib/services/api";
   import { engine } from "$lib/state/engine.svelte";
@@ -40,13 +42,14 @@
   $effect(() => {
     if (auth.role === "juri") {
       tab = "cameras";
-    } else if (auth.role === "operator" && !["operator", "cameras", "recordings"].includes(tab)) {
-      tab = "operator";
+    } else if (auth.role === "operator" && !["checklist", "operator", "cameras", "recordings"].includes(tab)) {
+      tab = "checklist";
     }
   });
 
   const allNav = [
-    { id: "operator", label: "Operator Arena (Live 24)", icon: LayoutDashboard, roles: ["operator", "admin"] },
+    { id: "checklist", label: "Checklist & Kontrol Ronde", icon: ClipboardCheck, roles: ["operator", "admin"] },
+    { id: "operator", label: "Livestream (Full Video 24)", icon: LayoutDashboard, roles: ["operator", "admin"] },
     { id: "cameras", label: "Monitor Juri (Grid 3x2)", icon: Cctv, roles: ["juri", "operator", "admin"] },
     { id: "recordings", label: "Rekaman & Arsip", icon: HardDrive, roles: ["operator", "admin"] },
     { id: "settings", label: "Pengaturan desktop", icon: Settings, roles: ["admin"] },
@@ -227,13 +230,13 @@
         </button>
       {/if}
 
-      {#if !["operator", "cameras"].includes(tab)}
+      {#if !["checklist", "operator", "cameras"].includes(tab)}
         <SessionBar />
       {/if}
 
       <main
         data-viewport
-        class="relative min-h-0 flex-1 flex flex-col {['cameras', 'operator'].includes(tab) ? 'overflow-hidden p-0' : 'overflow-y-auto p-6'}"
+        class="relative min-h-0 flex-1 flex flex-col {['checklist', 'cameras', 'operator'].includes(tab) ? 'overflow-hidden p-0' : 'overflow-y-auto p-6'}"
       >
         {#if engine.error}
           <div class="error m-3 mb-1 shrink-0 flex items-center justify-between" role="alert">
@@ -258,7 +261,11 @@
           </div>
         {/if}
 
-        {#if tab === "operator"}
+        {#if tab === "checklist"}
+          <div class="flex-1 min-h-0 w-full overflow-hidden">
+            <RoundChecklistPage />
+          </div>
+        {:else if tab === "operator"}
           <div class="flex-1 min-h-0 w-full overflow-hidden">
             <OperatorDashboard />
           </div>

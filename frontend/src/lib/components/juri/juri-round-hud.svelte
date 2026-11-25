@@ -10,9 +10,15 @@
     Sparkles,
     CheckCircle2,
     ArrowRight,
+    CheckSquare,
+    Square as SquareIcon,
   } from "@lucide/svelte";
   import type { Snippet } from "svelte";
-  import { roundStore, getJudgeAssignedZone } from "$lib/state/round.svelte";
+  import {
+    roundStore,
+    getJudgeAssignedZone,
+    getJudgeRotationSchedule,
+  } from "$lib/state/round.svelte";
   import { auth } from "$lib/state/auth.svelte";
 
   interface Props {
@@ -37,6 +43,14 @@
 
   const nextAssignedZone = $derived(
     getJudgeAssignedZone(auth.judgeIndex, Math.min(4, roundStore.currentShift + 1))
+  );
+
+  const myZoneSchedule = $derived(
+    getJudgeRotationSchedule(
+      auth.judgeIndex,
+      roundStore.startTime || "09:00",
+      roundStore.shiftDurationSeconds
+    )
   );
 
   // Shift countdown progress (0 to 1)
@@ -212,6 +226,46 @@
           {:else}
             <span class="text-emerald-400 font-semibold">Shift Terakhir</span>
           {/if}
+        </div>
+      </div>
+
+      <!-- Checklist Penilaian per Zona (Urutan & Waktu Ditentukan Sistem) -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between px-1 text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+          <span class="flex items-center gap-1.5">
+            <Clock class="h-3 w-3 text-emerald-400" />
+            <span>Checklist Zona Anda</span>
+          </span>
+          <span class="text-[9px] font-mono text-muted-foreground">J{auth.judgeIndex + 1}</span>
+        </div>
+
+        <div class="space-y-1">
+          {#each myZoneSchedule as item}
+            {@const checked = roundStore.isJudgeZoneChecked(roundStore.roundId, auth.judgeIndex, item.zone)}
+            {@const isCurrent = item.shift === roundStore.currentShift}
+            <button
+              type="button"
+              onclick={() => roundStore.toggleJudgeZoneCheck(roundStore.roundId, auth.judgeIndex, item.zone)}
+              class="w-full flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-[11px] transition {checked
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-foreground'
+                : isCurrent
+                ? 'border-primary bg-primary/15 text-foreground font-semibold'
+                : 'border-border bg-muted/60 text-muted-foreground hover:bg-accent'}"
+            >
+              <div class="flex items-center gap-2 min-w-0">
+                {#if checked}
+                  <CheckSquare class="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                {:else}
+                  <SquareIcon class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                {/if}
+                <span class="font-bold">Zona {item.zone}</span>
+                <span class="font-mono text-[10px] text-muted-foreground">({item.range})</span>
+              </div>
+              <span class="shrink-0 font-mono text-[10px] {isCurrent ? 'text-primary font-bold' : 'text-muted-foreground'}">
+                {item.startClock}–{item.endClock}
+              </span>
+            </button>
+          {/each}
         </div>
       </div>
 

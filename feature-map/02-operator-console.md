@@ -1,6 +1,6 @@
-# Feature Map: Konsol Operator Arena (Live 24)
+# Feature Map: Livestream (Full Video 24)
 
-Dokumen ini mendefinisikan peta interaksi untuk dasbor utama operator arena lomba (`OperatorDashboard`), pengelolaan waktu ronde/shift, dialog perpanjangan waktu (*Overtime Dialog*), dan penyimpanan berkas rekaman.
+Dokumen ini mendefinisikan peta interaksi untuk layar **Livestream (`OperatorDashboard`)** yang kini difokuskan sebagai tampilan **full video 24 gantangan** (filter zona dan mode Spotlight). Kontrol Start/Stop ronde, timer, dan checklist gantangan berada pada halaman [Checklist & Kontrol Ronde](./06-round-checklist.md).
 
 ---
 
