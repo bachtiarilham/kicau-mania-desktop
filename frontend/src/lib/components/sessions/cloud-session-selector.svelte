@@ -51,6 +51,7 @@
     if (open) {
       error = "";
       success = "";
+      selectedArenaId = auth.arenaId || "";
       initData();
     }
   });
@@ -58,8 +59,8 @@
   async function initData() {
     loading = true;
     error = "";
+    let arenaFetchError = "";
     try {
-      // 1. If arenaId not set, fetch arenas
       if (!selectedArenaId) {
         try {
           const arenaRes = await api.cloud<any>("/arenas?limit=50");
@@ -68,13 +69,20 @@
             selectedArenaId = arenas[0].id;
             auth.setArenaId(selectedArenaId);
           }
-        } catch {
-          // If /arenas fails, proceed if we have a fallback
+        } catch (err: any) {
+          arenaFetchError = message(err);
         }
       }
 
       if (selectedArenaId) {
         await loadEvents(selectedArenaId);
+      } else if (arenaFetchError) {
+        if (arenaFetchError.toLowerCase().includes("login ke cloud")) {
+          error =
+            "Sesi Cloud belum aktif (sedang menggunakan mode login offline). Silakan Logout lalu login menggunakan akun Cloud (contoh: operator.a@mock.kicau.test / admin@mock.kicau.test).";
+        } else {
+          error = "Gagal mengambil daftar Arena dari Cloud: " + arenaFetchError;
+        }
       } else {
         error = "Arena belum ditentukan. Pastikan akun memiliki akses ke Arena lomba.";
       }

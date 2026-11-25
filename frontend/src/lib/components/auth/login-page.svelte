@@ -2,15 +2,9 @@
   import { onMount } from "svelte";
   import {
     Shield,
-    Users,
-    Radio,
-    Eye,
     Lock,
     Mail,
     Globe,
-    ArrowRight,
-    Sparkles,
-    CheckCircle2,
     AlertCircle,
     Zap,
   } from "@lucide/svelte";
@@ -20,16 +14,29 @@
   import { auth, type UserRole } from "$lib/state/auth.svelte";
   import { api, message } from "$lib/services/api";
 
-  let email = $state("admin@kicaumania.com");
-  let password = $state("admin123");
+  let email = $state("");
+  let password = $state("");
   let error = $state("");
   let busy = $state(false);
 
-  // Cloud API Server configuration
   let showServerConfig = $state(false);
   let currentCloudUrl = $state("https://dev.megaallstararena.com/api/v1");
   let savingUrl = $state(false);
   let urlMessage = $state("");
+
+  function handleAutoFill(role: UserRole) {
+    if (role === "juri") {
+      email = "juri.1@mock.kicau.test";
+      password = "KicauMock2026!";
+    } else if (role === "operator") {
+      email = "operator.a@mock.kicau.test";
+      password = "KicauMock2026!";
+    } else {
+      email = "admin@mock.kicau.test";
+      password = "KicauMock2026!";
+    }
+    error = "";
+  }
 
   onMount(() => {
     void api
@@ -61,23 +68,6 @@
     }
   }
 
-  function handleQuickLogin(role: UserRole) {
-    auth.login(role);
-  }
-
-  function handleAutoFill(role: UserRole) {
-    if (role === "juri") {
-      email = "juri@kicaumania.com";
-      password = "juri123";
-    } else if (role === "operator") {
-      email = "operator@kicaumania.com";
-      password = "operator123";
-    } else {
-      email = "admin@kicaumania.com";
-      password = "admin123";
-    }
-  }
-
   async function handleFormSubmit(e: Event) {
     e.preventDefault();
     if (!email.trim() || !password) {
@@ -89,7 +79,6 @@
     error = "";
     try {
       const profile = await api.login(email.trim(), password);
-      // Determine role from cloud profile
       let role: UserRole = "operator";
       const roles: string[] = Array.isArray(profile?.roles)
         ? profile.roles.map((r: any) => String(r).toUpperCase())
@@ -105,41 +94,13 @@
         role = "operator";
       } else if (allRoles.includes("JUDGE") || allRoles.includes("JURI")) {
         role = "juri";
-      } else if (email.toLowerCase().includes("juri")) {
-        role = "juri";
       }
 
       const userName = profile?.name || profile?.nickname || "";
       const arenaId = profile?.arena_roles?.[0]?.arena_id || profile?.arena_id || "";
       auth.login(role, profile?.email || email.trim(), userName, undefined, arenaId);
     } catch (err: any) {
-      // Local fallback for offline arena operational use
-      const cleanEmail = email.trim().toLowerCase();
-      if (
-        cleanEmail === "juri" ||
-        cleanEmail === "juri@kicaumania.com"
-      ) {
-        auth.login("juri", email);
-        return;
-      }
-      if (
-        cleanEmail === "operator" ||
-        cleanEmail === "operator@kicaumania.com"
-      ) {
-        auth.login("operator", email);
-        return;
-      }
-      if (
-        cleanEmail === "admin" ||
-        cleanEmail === "admin@kicaumania.com" ||
-        password === "admin123" ||
-        password === "123456"
-      ) {
-        auth.login("admin", email);
-        return;
-      }
-
-      error = message(err) || "Email atau kata sandi tidak sesuai.";
+      error = message(err) || "Gagal terhubung ke server atau kredensial salah.";
     } finally {
       busy = false;
     }
@@ -147,140 +108,47 @@
 </script>
 
 <div class="relative flex min-h-screen w-full items-center justify-center overflow-y-auto bg-background p-4 text-foreground select-none">
-  <!-- Subtle futuristic background lighting -->
   <div class="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(16,185,129,0.12),transparent_70%)]"></div>
   <div class="pointer-events-none fixed inset-0 opacity-10" style="background-image: linear-gradient(rgba(40,75,61,0.24) 1px, transparent 1px), linear-gradient(90deg, rgba(40,75,61,0.24) 1px, transparent 1px); background-size: 36px 36px;"></div>
 
-  <div class="relative z-10 w-full max-w-4xl py-6">
-    <!-- Top Branding -->
-    <div class="mb-8 text-center">
+  <div class="relative z-10 w-full max-w-md py-6">
+    <div class="mb-6 text-center">
       <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-xl shadow-emerald-500/25 ring-4 ring-border">
         <Shield class="h-7 w-7" />
       </div>
-      <h1 class="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
+      <h1 class="text-2xl font-black tracking-tight text-foreground">
         KICAU MANIA DESKTOP
       </h1>
       <p class="mt-1 text-xs tracking-widest text-emerald-400 font-semibold uppercase">
         Arena Surveillance & Competition Workspace
       </p>
-      <p class="mx-auto mt-2 max-w-md text-xs text-muted-foreground">
-        Silakan pilih peran operasional Anda untuk masuk langsung ke sistem.
-      </p>
     </div>
 
-    <!-- 3 Role Selection Cards (Quick 1-Click Access) -->
-    <div class="grid gap-4 sm:grid-cols-3">
-      <!-- Juri Card -->
-      <button
-        type="button"
-        onclick={() => handleQuickLogin("juri")}
-        class="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 text-left shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-amber-500/50 hover:bg-accent hover:shadow-amber-500/10"
-      >
-        <div>
-          <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30 group-hover:scale-105 transition">
-            <Eye class="h-5 w-5" />
-          </div>
-          <h2 class="text-base font-bold text-foreground group-hover:text-amber-400 transition">
-            Dewan Juri
-          </h2>
-          <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Khusus pemantauan <strong class="text-foreground">Grid 3x2 per zona</strong>, grafik audio burung real-time, dan timer rotasi juri.
-          </p>
-        </div>
-
-        <div class="mt-5 flex items-center justify-between border-t border-border pt-3">
-          <span class="rounded bg-amber-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-400 uppercase">
-            Akses Juri
-          </span>
-          <span class="flex items-center gap-1 text-xs font-semibold text-amber-400 group-hover:translate-x-1 transition">
-            Masuk <ArrowRight class="h-3.5 w-3.5" />
-          </span>
-        </div>
-      </button>
-
-      <!-- Operator Card -->
-      <button
-        type="button"
-        onclick={() => handleQuickLogin("operator")}
-        class="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 text-left shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-emerald-500/50 hover:bg-accent hover:shadow-emerald-500/10"
-      >
-        <div>
-          <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30 group-hover:scale-105 transition">
-            <Radio class="h-5 w-5" />
-          </div>
-          <h2 class="text-base font-bold text-foreground group-hover:text-emerald-400 transition">
-            Operator Arena
-          </h2>
-          <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Kontrol tombol <strong class="text-foreground">Start / Stop babak</strong>, timer sinkronisasi, dan matrix <strong class="text-foreground">24 gantangan</strong>.
-          </p>
-        </div>
-
-        <div class="mt-5 flex items-center justify-between border-t border-border pt-3">
-          <span class="rounded bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-400 uppercase">
-            Akses Operator
-          </span>
-          <span class="flex items-center gap-1 text-xs font-semibold text-emerald-400 group-hover:translate-x-1 transition">
-            Masuk <ArrowRight class="h-3.5 w-3.5" />
-          </span>
-        </div>
-      </button>
-
-      <!-- Administrator Card -->
-      <button
-        type="button"
-        onclick={() => handleQuickLogin("admin")}
-        class="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 text-left shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-sky-500/50 hover:bg-accent hover:shadow-sky-500/10"
-      >
-        <div>
-          <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400 ring-1 ring-sky-500/30 group-hover:scale-105 transition">
-            <Shield class="h-5 w-5" />
-          </div>
-          <h2 class="text-base font-bold text-foreground group-hover:text-sky-400 transition">
-            Administrator
-          </h2>
-          <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Akses lengkap: <strong class="text-foreground">Operator + Rekaman & Arsip</strong>, & konfigurasi sistem NVR.
-          </p>
-        </div>
-
-        <div class="mt-5 flex items-center justify-between border-t border-border pt-3">
-          <span class="rounded bg-sky-500/15 px-2 py-0.5 font-mono text-[10px] font-bold text-sky-400 uppercase">
-            Akses Penuh
-          </span>
-          <span class="flex items-center gap-1 text-xs font-semibold text-sky-400 group-hover:translate-x-1 transition">
-            Masuk <ArrowRight class="h-3.5 w-3.5" />
-          </span>
-        </div>
-      </button>
-    </div>
-
-    <!-- Manual Login Accordion / Alternative -->
-    <div class="mt-6 rounded-2xl border border-border bg-card p-6 shadow-xl">
+    <div class="rounded-2xl border border-border bg-card p-6 shadow-xl">
       <div class="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
         <div>
-          <h2 class="text-sm font-bold text-foreground">Login Manual dengan Akun Terdaftar</h2>
-          <p class="text-xs text-muted-foreground">Gunakan email & kata sandi akun cloud atau akun lokal.</p>
+          <h2 class="text-sm font-bold text-foreground">Masuk ke Server Cloud</h2>
+          <p class="text-xs text-muted-foreground">Gunakan akun Admin, Operator, atau Juri yang terdaftar di server.</p>
         </div>
         <div class="flex items-center gap-1.5">
           <button
             type="button"
             onclick={() => handleAutoFill("juri")}
-            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-amber-400 hover:bg-accent/80"
+            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-amber-400 hover:bg-accent/80 cursor-pointer"
           >
             Auto: Juri
           </button>
           <button
             type="button"
             onclick={() => handleAutoFill("operator")}
-            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:bg-accent/80"
+            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-emerald-400 hover:bg-accent/80 cursor-pointer"
           >
             Auto: Operator
           </button>
           <button
             type="button"
             onclick={() => handleAutoFill("admin")}
-            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-sky-400 hover:bg-accent/80"
+            class="rounded bg-accent px-2 py-1 text-[11px] font-semibold text-sky-400 hover:bg-accent/80 cursor-pointer"
           >
             Auto: Admin
           </button>
@@ -294,15 +162,15 @@
         </div>
       {/if}
 
-      <form onsubmit={handleFormSubmit} class="grid gap-4 sm:grid-cols-2">
+      <form onsubmit={handleFormSubmit} class="space-y-4">
         <div class="space-y-1.5">
-          <Label for="login-email" class="text-xs text-foreground">Email / Akun</Label>
+          <Label for="login-email" class="text-xs text-foreground">Email Akun</Label>
           <div class="relative">
             <Input
               id="login-email"
-              type="text"
+              type="email"
               bind:value={email}
-              placeholder="operator@kicaumania.com"
+              placeholder="admin@mock.kicau.test"
               class="border-border bg-muted pl-9 text-xs text-foreground"
             />
             <Mail class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -323,43 +191,40 @@
           </div>
         </div>
 
-        <div class="sm:col-span-2 flex items-center justify-end">
-          <Button
-            type="submit"
-            disabled={busy}
-            class="bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-500 px-6"
-          >
-            <Zap class="h-3.5 w-3.5 mr-1" />
-            <span>{busy ? "Memverifikasi..." : "Masuk ke Sistem"}</span>
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          disabled={busy}
+          class="w-full bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-500"
+        >
+          <Zap class="h-3.5 w-3.5 mr-1.5" />
+          <span>{busy ? "Menghubungkan ke Server..." : "Masuk ke Sistem"}</span>
+        </Button>
       </form>
 
-      <!-- Server Cloud API Configuration (Best Practice: Operator can switch hosting domain) -->
       <div class="mt-6 border-t border-border pt-4">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-2">
           <button
             type="button"
             onclick={() => (showServerConfig = !showServerConfig)}
-            class="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer"
+            class="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition cursor-pointer min-w-0"
           >
-            <Globe class="h-3.5 w-3.5 text-primary" />
-            <span>Alamat Server Cloud:</span>
-            <span class="font-mono text-[10px] text-primary/80 truncate max-w-xs">{currentCloudUrl}</span>
+            <Globe class="h-3.5 w-3.5 text-primary shrink-0" />
+            <span class="shrink-0">Server:</span>
+            <span class="font-mono text-[10px] text-primary/80 truncate">{currentCloudUrl}</span>
           </button>
           <button
             type="button"
             onclick={() => (showServerConfig = !showServerConfig)}
-            class="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+            class="text-[10px] font-bold text-primary hover:underline cursor-pointer shrink-0"
           >
-            {showServerConfig ? "Tutup" : "Ubah Alamat"}
+            {showServerConfig ? "Tutup" : "Ubah"}
           </button>
         </div>
 
         {#if showServerConfig}
           <div class="mt-3 rounded-xl border border-border bg-muted/60 p-3 space-y-2.5">
             <div class="text-[10px] text-muted-foreground">
-              Masukkan alamat HTTPS API cloud hosting server (contoh: <code>https://api.kicaumania.com/api/v1</code>).
+              Alamat HTTPS API Cloud Server (contoh: <code>https://dev.megaallstararena.com/api/v1</code>).
             </div>
             <div class="flex gap-2">
               <Input
@@ -375,7 +240,7 @@
                 onclick={handleSaveCloudUrl}
                 class="text-xs font-bold bg-primary text-black hover:bg-primary/90 shrink-0"
               >
-                {savingUrl ? "Menyimpan..." : "Simpan URL"}
+                {savingUrl ? "Menyimpan..." : "Simpan"}
               </Button>
             </div>
             {#if urlMessage}

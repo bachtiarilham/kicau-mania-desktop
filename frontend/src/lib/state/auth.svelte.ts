@@ -97,6 +97,7 @@ class AuthStore {
     this.role = null;
     this.userEmail = "";
     this.userName = "";
+    this.arenaId = "";
     if (typeof localStorage !== "undefined") {
       localStorage.removeItem(AUTH_STORAGE_KEY);
     }
