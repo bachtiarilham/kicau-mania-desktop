@@ -4,7 +4,6 @@
     Square,
     RotateCcw,
     Trophy,
-    Settings,
     Cloud,
     CheckCircle2,
   } from "@lucide/svelte";
@@ -12,16 +11,14 @@
   import { roundStore } from "$lib/state/round.svelte";
 
   interface Props {
-    openingEditModal: boolean;
+    selectingRound?: boolean;
     onOpenCloudModal: () => void;
-    onOpenEditModal: () => void;
     onStopRound: () => void;
   }
 
   let {
-    openingEditModal,
+    selectingRound = false,
     onOpenCloudModal,
-    onOpenEditModal,
     onStopRound,
   }: Props = $props();
 
@@ -40,23 +37,8 @@
             Nama Event
           </div>
           <div class="text-xs font-extrabold tracking-tight text-foreground">
-            {roundStore.eventName}
+            {roundStore.eventName || "Belum ada event"}
           </div>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2 rounded-xl border border-border bg-muted px-2.5 py-1.5 shadow-sm">
-        <div>
-          <div class="text-[9px] font-bold tracking-widest text-muted-foreground uppercase">
-            Babak Penilaian
-          </div>
-          <div class="text-xs font-black text-amber-400">
-            {roundStore.sessionName}
-          </div>
-        </div>
-        <span class="text-muted-foreground">·</span>
-        <div class="font-mono text-xs text-foreground">
-          <span class="text-muted-foreground">{roundStore.startTime}</span> – <span class="text-foreground">{roundStore.endTime}</span>
         </div>
       </div>
 
@@ -67,7 +49,7 @@
         title="Tarik event & jadwal ronde dari database cloud"
       >
         <Cloud class="h-3 w-3" />
-        <span>Pilih Sesi Cloud</span>
+        <span>Pilih Event Cloud</span>
       </Button>
 
       {#if roundStore.roundId}
@@ -80,16 +62,6 @@
         </span>
       {/if}
 
-      <Button
-        variant="outline"
-        size="sm"
-        onclick={onOpenEditModal}
-        disabled={openingEditModal}
-        class="h-7 border-border bg-accent text-xs text-foreground hover:bg-accent hover:text-foreground"
-      >
-        <Settings class="h-3 w-3" />
-        <span>Lihat Lomba & Juri</span>
-      </Button>
     </div>
 
     <!-- Center & Right: Tactical Big START / STOP Buttons & Giant Timer -->
@@ -100,7 +72,7 @@
       >
         <div class="flex flex-col items-center">
           <span class="text-[8px] font-bold tracking-widest text-muted-foreground uppercase">
-            Ronde: Shift {roundStore.currentShift}/4
+            Sisa waktu ronde
           </span>
           <div class="flex items-baseline gap-1.5 font-mono">
             <span
@@ -109,7 +81,7 @@
               {Math.floor(roundStore.roundRemainingSeconds / 60)}:{String(roundStore.roundRemainingSeconds % 60).padStart(2, "0")}
             </span>
             <span class="text-xs font-bold text-amber-400">
-              ({roundStore.shiftRemainingSeconds}s)
+              Shift {roundStore.currentShift}/4 · {roundStore.shiftRemainingSeconds}s
             </span>
           </div>
         </div>
@@ -117,6 +89,7 @@
         <button
           type="button"
           onclick={() => roundStore.resetRound()}
+          disabled={!roundStore.roundId || roundStore.state === "RUNNING"}
           class="flex h-6 w-6 items-center justify-center rounded-lg bg-accent text-muted-foreground transition hover:bg-accent hover:text-foreground"
           title="Reset timer ke awal ronde"
         >
@@ -128,7 +101,7 @@
       <div class="flex items-center gap-2">
         <button
           type="button"
-          disabled={!roundStore.roundId || roundStore.state === "RUNNING"}
+          disabled={selectingRound || !roundStore.roundId || roundStore.state === "RUNNING"}
           onclick={() => roundStore.startRound()}
           class="group relative flex h-10 items-center gap-2 rounded-full px-5 text-xs font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed {roundStore.state === 'RUNNING' ? 'bg-emerald-600/60 shadow-emerald-600/20' : 'bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 active:scale-95 shadow-emerald-500/30 hover:shadow-emerald-500/50'}"
         >

@@ -52,7 +52,8 @@ export async function all(path: string): Promise<Row[]> {
         "limit=100&cursor=" +
         encodeURIComponent(cursor),
     );
-    if (!Array.isArray(page.items) || typeof page.has_more !== "boolean")
+    if (page?.items === null && page.has_more === false) return rows;
+    if (!Array.isArray(page?.items) || typeof page.has_more !== "boolean")
       throw Error("Pagination cloud tidak valid");
     rows.push(...page.items);
     if (!page.has_more) return rows;

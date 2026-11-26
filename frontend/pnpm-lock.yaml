@@ -11,6 +11,9 @@ importers:
       '@fontsource-variable/inter':
         specifier: 5.3.0
         version: 5.3.0
+      '@internationalized/date':
+        specifier: 3.12.4
+        version: 3.12.4
       '@lucide/svelte':
         specifier: 1.72.0
         version: 1.72.0(svelte@5.57.3)

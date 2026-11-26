@@ -1,14 +1,9 @@
 <script lang="ts">
   import GantanganCard from "./gantangan-card.svelte";
-  import type { GantanganStream } from "$lib/models";
-
-  interface StreamItem extends GantanganStream {
-    isLive: boolean;
-    channelIndex: number;
-  }
+  import type { CameraSlot } from "$lib/components/cameras/camera-slots";
 
   interface Props {
-    streams: StreamItem[];
+    streams: CameraSlot[];
     selectedFilter: "all" | "A" | "B" | "C" | "D";
     audibleId: string | null;
     zoomed: Record<string, number>;

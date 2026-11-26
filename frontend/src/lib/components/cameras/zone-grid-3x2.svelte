@@ -14,6 +14,7 @@
   import type { Snippet } from "svelte";
   import { Button } from "$lib/components/ui/button";
   import NativePlayer from "./native-player.svelte";
+  import ParticipantLabel from "./participant-label.svelte";
   import ZoomSlider from "./zoom-slider.svelte";
   import AudioMeter from "../metrics/audio-meter.svelte";
   import JuriRoundHud from "../juri/juri-round-hud.svelte";
@@ -21,8 +22,7 @@
   import { engine } from "$lib/state/engine.svelte";
   import { roundStore, getJudgeAssignedZone } from "$lib/state/round.svelte";
   import { auth } from "$lib/state/auth.svelte";
-  import { MOCK_GANTANGAN_STREAMS } from "$lib/services/livestream.mock";
-  import type { GantanganStream } from "$lib/models/livestream.model";
+  import { cameraSlots } from "./camera-slots";
 
   interface Props {
     showZoneBar?: boolean;
@@ -69,54 +69,7 @@
     }
   });
 
-  // Exactly 6 slots per zone
-  interface ZoneSlot {
-    index: number;
-    stream: GantanganStream;
-    channelId: string;
-    channelIndex: number;
-  }
-
-  let zoneSlots = $derived.by<ZoneSlot[]>(() => {
-    const startIndex =
-      selectedZone === "A"
-        ? 0
-        : selectedZone === "B"
-        ? 6
-        : selectedZone === "C"
-        ? 12
-        : 18;
-
-    const slots: ZoneSlot[] = [];
-    for (let i = 0; i < 6; i++) {
-      const idx = startIndex + i;
-      const stream = MOCK_GANTANGAN_STREAMS[idx] ?? {
-        id: `g${String(idx + 1).padStart(2, "0")}`,
-        code: `G${String(idx + 1).padStart(2, "0")}`,
-        channelName: `Gantangan ${String(idx + 1).padStart(2, "0")}`,
-        category: "Murai Batu",
-        arenaName: `Arena ${selectedZone}`,
-        roundLabel: "Ronde 01",
-        viewerCount: 0,
-        isLive: engine.connected || engine.running,
-        quality: "1080P60",
-        zone: selectedZone,
-        previewGradient: "from-emerald-50 to-slate-100",
-        accentColor: "from-primary to-primary/80",
-      };
-
-      const realChan = engine.channels[idx];
-      const channelId = realChan?.id ?? stream.id;
-
-      slots.push({
-        index: i,
-        stream,
-        channelId,
-        channelIndex: idx,
-      });
-    }
-    return slots;
-  });
+  const zoneSlots = $derived(cameraSlots(engine.channels).filter((slot) => slot.zone === selectedZone));
 
   async function toggleAudio(id: string) {
     const nextMuted = audibleId === id;
@@ -260,9 +213,9 @@
         style:grid-template-columns={focusId ? "1fr" : "repeat(3, minmax(0, 1fr))"}
         style:grid-template-rows={focusId ? "1fr" : "repeat(2, minmax(0, 1fr))"}
       >
-        {#each zoneSlots as slot (slot.channelId)}
+        {#each zoneSlots as slot (slot.id)}
           <article
-            class:hidden={!!focusId && focusId !== slot.channelId}
+            class:hidden={!!focusId && focusId !== slot.id}
             class="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-md transition-all duration-150 hover:border-border"
           >
             <!-- Cell Header: Compact (height ~32px) -->
@@ -270,31 +223,21 @@
               class="flex h-8 shrink-0 items-center justify-between border-b border-border bg-muted px-2.5 py-0.5"
             >
               <div class="flex min-w-0 items-center gap-2">
-                <span
-                  class="flex h-5 items-center justify-center rounded bg-gradient-to-br {slot.stream.accentColor} px-1.5 text-[11px] font-extrabold tracking-tight text-white shadow-xs"
-                >
-                  {slot.stream.code}
-                </span>
-                <span class="truncate text-xs font-semibold text-foreground">
-                  {slot.stream.category}
-                </span>
-                <span class="hidden text-[10px] text-muted-foreground sm:inline truncate">
-                  · {slot.stream.arenaName}
-                </span>
+                <ParticipantLabel number={slot.number} class="text-xs font-semibold" />
               </div>
 
               <div class="flex shrink-0 items-center gap-1">
                 <span class="font-mono text-[9px] text-muted-foreground">
-                  {#if engine.running}
+                  {#if slot.attached && engine.running}
                     <span class="inline-flex items-center gap-1 text-rose-400 font-bold">
                       <span class="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse"></span>
                       REC
                     </span>
-                  {:else if engine.connected}
+                  {:else if slot.attached && engine.connected}
                     <span class="inline-flex items-center gap-1 text-emerald-400">
                       <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                      {engine.playerStatus[slot.channelId]?.fps !== undefined
-                        ? `${Number(engine.playerStatus[slot.channelId].fps).toFixed(0)} FPS`
+                      {engine.playerStatus[slot.id]?.fps !== undefined
+                        ? `${Number(engine.playerStatus[slot.id].fps).toFixed(0)} FPS`
                         : "LIVE"}
                     </span>
                   {:else}
@@ -304,12 +247,13 @@
 
                 <button
                   type="button"
-                  onclick={() => toggleAudio(slot.channelId)}
+                  onclick={() => toggleAudio(slot.id)}
+                  disabled={!slot.attached || !engine.connected}
                   class="flex h-6 w-6 items-center justify-center rounded text-foreground transition hover:bg-accent"
-                  aria-label={audibleId !== slot.channelId ? "Nyalakan suara" : "Bisukan suara"}
-                  title={audibleId !== slot.channelId ? "Nyalakan suara" : "Bisukan"}
+                  aria-label={audibleId !== slot.id ? "Nyalakan suara" : "Bisukan suara"}
+                  title={audibleId !== slot.id ? "Nyalakan suara" : "Bisukan"}
                 >
-                  {#if audibleId !== slot.channelId}
+                  {#if audibleId !== slot.id}
                     <VolumeX class="h-3.5 w-3.5 text-muted-foreground" />
                   {:else}
                     <Volume2 class="h-3.5 w-3.5 text-sky-400" />
@@ -318,12 +262,12 @@
 
                 <button
                   type="button"
-                  onclick={() => toggleFocus(slot.channelId)}
+                  onclick={() => toggleFocus(slot.id)}
                   class="flex h-6 w-6 items-center justify-center rounded text-foreground transition hover:bg-accent"
-                  aria-label={focusId === slot.channelId ? "Kembali ke 3x2" : "Fokus layar penuh"}
-                  title={focusId === slot.channelId ? "Kembali ke 3x2" : "Fokus"}
+                  aria-label={focusId === slot.id ? "Kembali ke 3x2" : "Fokus layar penuh"}
+                  title={focusId === slot.id ? "Kembali ke 3x2" : "Fokus"}
                 >
-                  {#if focusId === slot.channelId}
+                  {#if focusId === slot.id}
                     <Minimize2 class="h-3.5 w-3.5 text-amber-400" />
                   {:else}
                     <Maximize2 class="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
@@ -334,52 +278,27 @@
 
             <!-- Video Player Area: Fills remaining height -->
             <div class="relative mx-0.5 min-h-0 flex-1 overflow-hidden bg-muted">
-              {#if engine.connected}
+              {#if engine.connected && slot.attached}
                 <NativePlayer
-                  id={slot.channelId}
-                  zoom={zoomed[slot.channelId] ?? 100}
-                  visible={!focusId || focusId === slot.channelId}
+                  id={slot.id}
+                  zoom={zoomed[slot.id] ?? 100}
+                  visible={!focusId || focusId === slot.id}
                   class="h-full w-full"
                 />
-              {:else}
-                <!-- Aesthetic Standby / Preview Canvas -->
-                <div
-                  class="relative flex h-full w-full items-center justify-center bg-gradient-to-br {slot.stream.previewGradient}"
-                >
-                  <div
-                    class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.1),transparent_65%)]"
-                  ></div>
-                  <div
-                    class="pointer-events-none absolute inset-0 opacity-15"
-                    style="background-image: linear-gradient(rgba(40,75,61,0.24) 1px, transparent 1px), linear-gradient(90deg, rgba(40,75,61,0.24) 1px, transparent 1px); background-size: 24px 24px;"
-                  ></div>
-
-                  <div class="relative z-10 flex flex-col items-center gap-1.5 text-center">
-                    <div
-                      class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br {slot.stream.accentColor} text-sm font-black text-white shadow-md ring-2 ring-border"
-                    >
-                      {slot.stream.code}
-                    </div>
-                    <span class="text-[11px] font-medium text-foreground">
-                      {slot.stream.channelName}
-                    </span>
-                    <span class="rounded bg-muted px-2 py-0.5 text-[9px] font-semibold text-muted-foreground backdrop-blur-xs">
-                      Mulai sesi untuk stream live
-                    </span>
-                  </div>
-                </div>
+              {:else if engine.connected}
+                <div class="grid h-full place-items-center text-xs text-muted-foreground">Kamera tidak terpasang</div>
               {/if}
             </div>
 
             <!-- Bottom: Active Audio Meter with Live Waveform Graph -->
             <div class="shrink-0 bg-card pt-0.5">
-              {#if engine.connected && engine.channels.some((channel) => channel.id === slot.channelId)}
+              {#if engine.connected && slot.attached}
                 <ZoomSlider
-                  value={zoomed[slot.channelId] ?? 100}
-                  onChange={(value) => (zoomed[slot.channelId] = value)}
+                  value={zoomed[slot.id] ?? 100}
+                  onChange={(value) => (zoomed[slot.id] = value)}
                 />
               {/if}
-              <AudioMeter metric={engine.metrics[slot.channelId]} compact />
+              <AudioMeter metric={engine.metrics[slot.id]} compact />
             </div>
           </article>
         {/each}

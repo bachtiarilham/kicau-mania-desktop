@@ -4,12 +4,11 @@ import { api } from "$lib/services/api";
 import type {
   JudgeZoneScheduleItem,
   ParticipantMapping,
-  RoundConfig,
   RoundState,
   ZoneId,
 } from "$lib/models";
 
-export type { JudgeZoneScheduleItem, ParticipantMapping, RoundConfig, RoundState, ZoneId };
+export type { JudgeZoneScheduleItem, ParticipantMapping, RoundState, ZoneId };
 
 const ZONE_RANGES: Record<ZoneId, string> = {
   A: "G01 – G06",
@@ -70,23 +69,9 @@ export function getJudgeRotationSchedule(
 }
 
 const STORAGE_KEY = "kicau_cloud_round_v1";
-const SYNC_CHANNEL = "kicau_cloud_round_sync_v1";
-const defaultRoundDuration = 600;
-
-function scheduledSeconds(start: string, end: string) {
-  const parse = (time: string) => {
-    const match = time.trim().match(/^(\d{1,2})[:.](\d{2})(?::(\d{2}))?(?:\s*(?:WIB|WITA|WIT))?$/i);
-    if (!match) return null;
-    const [, h, m, s = "00"] = match;
-    if (+h >= 24 || +m >= 60 || +s >= 60) return null;
-    return +h * 3600 + +m * 60 + +s;
-  };
-  const from = parse(start);
-  const to = parse(end);
-  if (from === null || to === null) return defaultRoundDuration;
-  const duration = (to - from + 86400) % 86400;
-  return duration >= 4 ? duration : defaultRoundDuration;
-}
+const SYNC_CHANNEL = "kicau_cloud_round_sync_v2";
+const roundDurationSeconds = 10 * 60;
+const shiftCount = 4;
 
 class RoundStore {
   eventName = $state("");
@@ -99,11 +84,10 @@ class RoundStore {
   roundId = $state("");
   participants = $state<ParticipantMapping[]>([]);
 
-  // Round is 10 minutes (600 seconds) divided into 4 shifts of 150 seconds each
-  totalDurationSeconds = $state(600);
-  shiftDurationSeconds = $state(150);
-  roundRemainingSeconds = $state(600);
-  shiftRemainingSeconds = $state(150);
+  readonly totalDurationSeconds = roundDurationSeconds;
+  readonly shiftDurationSeconds = roundDurationSeconds / shiftCount;
+  roundRemainingSeconds = $state(this.totalDurationSeconds);
+  shiftRemainingSeconds = $state(this.shiftDurationSeconds);
   currentShift = $state(1);
 
   state = $state<RoundState>("IDLE");
@@ -112,21 +96,6 @@ class RoundStore {
   overtimeSeconds = $state(0);
   checkedGantangan = $state<Record<string, Record<number, boolean>>>({});
   judgeZoneChecks = $state<Record<string, Record<string, boolean>>>({});
-
-  // Backward-compatibility properties for existing components/tests
-  get durationSeconds(): number {
-    return this.shiftDurationSeconds;
-  }
-  set durationSeconds(val: number) {
-    this.shiftDurationSeconds = val;
-  }
-
-  get remainingSeconds(): number {
-    return this.shiftRemainingSeconds;
-  }
-  set remainingSeconds(val: number) {
-    this.shiftRemainingSeconds = val;
-  }
 
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private channel: BroadcastChannel | null = null;
@@ -162,8 +131,6 @@ class RoundStore {
         eventId: this.eventId,
         roundId: this.roundId,
         participants: $state.snapshot(this.participants),
-        totalDurationSeconds: this.totalDurationSeconds,
-        shiftDurationSeconds: this.shiftDurationSeconds,
         roundRemainingSeconds: this.roundRemainingSeconds,
         shiftRemainingSeconds: this.shiftRemainingSeconds,
         currentShift: this.currentShift,
@@ -188,8 +155,6 @@ class RoundStore {
     this.eventId = payload.eventId ?? this.eventId;
     this.roundId = payload.roundId ?? this.roundId;
     this.participants = Array.isArray(payload.participants) ? payload.participants : this.participants;
-    this.totalDurationSeconds = payload.totalDurationSeconds ?? this.totalDurationSeconds;
-    this.shiftDurationSeconds = payload.shiftDurationSeconds ?? this.shiftDurationSeconds;
     this.roundRemainingSeconds = payload.roundRemainingSeconds ?? this.roundRemainingSeconds;
     this.shiftRemainingSeconds = payload.shiftRemainingSeconds ?? this.shiftRemainingSeconds;
     this.currentShift = payload.currentShift ?? this.currentShift;
@@ -223,8 +188,6 @@ class RoundStore {
           eventId: this.eventId,
           roundId: this.roundId,
           participants: this.participants,
-          totalDurationSeconds: this.totalDurationSeconds,
-          shiftDurationSeconds: this.shiftDurationSeconds,
           checkedGantangan: $state.snapshot(this.checkedGantangan),
           judgeZoneChecks: $state.snapshot(this.judgeZoneChecks),
         })
@@ -248,14 +211,6 @@ class RoundStore {
         if (parsed.eventId) this.eventId = parsed.eventId;
         if (parsed.roundId) this.roundId = parsed.roundId;
         if (Array.isArray(parsed.participants)) this.participants = parsed.participants;
-        if (typeof parsed.totalDurationSeconds === "number") {
-          this.totalDurationSeconds = parsed.totalDurationSeconds;
-          this.roundRemainingSeconds = parsed.totalDurationSeconds;
-        }
-        if (typeof parsed.shiftDurationSeconds === "number") {
-          this.shiftDurationSeconds = parsed.shiftDurationSeconds;
-          this.shiftRemainingSeconds = parsed.shiftDurationSeconds;
-        }
         if (parsed.checkedGantangan && typeof parsed.checkedGantangan === "object") {
           this.checkedGantangan = parsed.checkedGantangan;
         }
@@ -286,17 +241,27 @@ class RoundStore {
     this.endTime = config.endTime;
     this.jurors = [...config.jurors];
     this.participants = [...(config.participants ?? [])];
-    this.totalDurationSeconds = scheduledSeconds(config.startTime, config.endTime);
-    this.shiftDurationSeconds = Math.floor(this.totalDurationSeconds / 4);
     this.saveToStorage();
     this.resetRound();
   }
 
-  clearCloudRound() {
+  selectCloudEvent(eventId: string, eventName: string) {
+    if (eventId && this.eventId === eventId) {
+      if (this.eventName !== eventName) {
+        this.eventName = eventName;
+        this.saveToStorage();
+        this.broadcast();
+      }
+      return;
+    }
     this.setCloudRound({
-      eventId: "", roundId: "", eventName: "", sessionName: "",
+      eventId, roundId: "", eventName, sessionName: "",
       startTime: "", endTime: "", jurors: [],
     });
+  }
+
+  clearCloudRound() {
+    this.selectCloudEvent("", "");
   }
 
   getParticipantByGantangan(num: number): ParticipantMapping | undefined {
@@ -350,15 +315,12 @@ class RoundStore {
   async startRound() {
     if (!this.roundId || this.state === "RUNNING") return;
 
+    if (this.state === "FINISHED" || this.roundRemainingSeconds <= 0) {
+      this.resetRound();
+    }
     this.state = "RUNNING";
     this.rotationAlert = false;
     this.startedAt = Date.now();
-
-    if (this.roundRemainingSeconds <= 0) {
-      this.roundRemainingSeconds = this.totalDurationSeconds;
-      this.shiftRemainingSeconds = this.shiftDurationSeconds;
-      this.currentShift = 1;
-    }
 
     this.startLocalTicker();
     this.broadcast();
@@ -372,6 +334,24 @@ class RoundStore {
       if (typeof window !== "undefined" && !engine.running && !engine.busy) {
         if (!engine.draftID) {
           engine.draftID = await api.sessionID();
+        }
+        if (engine.pairing.engine_id && engine.pairing.arena_id === auth.arenaId) {
+          const mappings = this.participants.flatMap((participant) => {
+            const channel = engine.channels[participant.gantanganNumber - 1];
+            return channel?.id && participant.registrationId && participant.gantanganId
+              ? [{ channel_id: channel.id, registration_id: participant.registrationId, gantangan_id: participant.gantanganId }]
+              : [];
+          });
+          if (mappings.length) {
+            await api.bind({
+              engine_id: engine.pairing.engine_id,
+              session_id: engine.draftID,
+              round_id: this.roundId,
+              mappings,
+            }).catch(() => {
+              engine.notice = "Pemetaan peserta ke rekaman belum tersinkron ke cloud.";
+            });
+          }
         }
         await engine.start(engine.draftID);
         engine.draftID = "";
@@ -470,10 +450,10 @@ class RoundStore {
 
       // Check shift transition (every 150s)
       if (this.shiftRemainingSeconds === 0) {
-        if (this.currentShift < 4) {
+        if (this.currentShift < shiftCount) {
           // Advance to next shift
           this.currentShift += 1;
-          this.shiftRemainingSeconds = this.currentShift === 4 ? this.roundRemainingSeconds : this.shiftDurationSeconds;
+          this.shiftRemainingSeconds = this.currentShift === shiftCount ? this.roundRemainingSeconds : this.shiftDurationSeconds;
           this.rotationAlert = true;
           // Auto-clear rotation alert after 10 seconds
           setTimeout(() => {

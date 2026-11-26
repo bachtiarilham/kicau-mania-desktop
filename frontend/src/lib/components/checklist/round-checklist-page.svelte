@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { untrack } from "svelte";
   import {
     CheckSquare,
     Square,
@@ -17,7 +17,6 @@
   import { Input } from "$lib/components/ui/input";
   import OperatorHeader from "../operator/operator-header.svelte";
   import QuickSaveModal from "../operator/modals/quick-save-modal.svelte";
-  import RoundConfigModal from "../operator/modals/round-config-modal.svelte";
   import RoundTimeUpDialog from "../sessions/round-timeup-dialog.svelte";
   import CloudSessionSelector from "../sessions/cloud-session-selector.svelte";
   import {
@@ -29,11 +28,9 @@
   } from "$lib/state/round.svelte";
   import { engine } from "$lib/state/engine.svelte";
   import { auth } from "$lib/state/auth.svelte";
-  import { api, message } from "$lib/services/api";
+  import { all, api, message, type Row } from "$lib/services/api";
 
   let showCloudModal = $state(false);
-  let showEditModal = $state(false);
-  let openingEditModal = $state(false);
   let search = $state("");
 
   let confirmSave = $state(false);
@@ -41,7 +38,9 @@
   let selectedFormat = $state("mp4");
   let storageDir = $state("D:\\KicauRecordings");
 
-  let cloudRounds = $state<any[]>([]);
+  let cloudRounds = $state<Row[]>([]);
+  let requestVersion = 0;
+  let selectingRound = $state(false);
   let loadingRounds = $state(false);
   let roundsError = $state("");
 
@@ -100,85 +99,80 @@
     }
   }
 
-  async function fetchTodayRounds() {
-    if (!auth.arenaId) {
-      try {
-        const arenaRes = await api.cloud<any>("/arenas?limit=50");
-        const list = Array.isArray(arenaRes?.items) ? arenaRes.items : [];
-        if (list.length > 0) auth.setArenaId(list[0].id);
-      } catch {
-        // Ignore if offline or unauthenticated
-      }
-    }
-    if (!auth.arenaId) return;
-
-    loadingRounds = true;
+  async function fetchEventRounds(arenaId = auth.arenaId, eventId = roundStore.eventId) {
+    const request = ++requestVersion;
+    cloudRounds = [];
     roundsError = "";
+    loadingRounds = !!arenaId && !!eventId;
+    if (!loadingRounds) return;
     try {
-      const res = await api.cloud<any>(`/arenas/${auth.arenaId}/rounds?limit=50`);
-      cloudRounds = Array.isArray(res?.items) ? res.items : [];
-    } catch (err: any) {
-      roundsError = message(err);
+      const rounds = await all(`/arenas/${encodeURIComponent(arenaId)}/rounds`);
+      if (request !== requestVersion) return;
+      cloudRounds = rounds.filter((row) => row.event_id === eventId)
+        .sort((a, b) => (a.round_number ?? 0) - (b.round_number ?? 0));
+    } catch (err) {
+      if (request === requestVersion) roundsError = message(err);
     } finally {
-      loadingRounds = false;
+      if (request === requestVersion) loadingRounds = false;
     }
   }
 
-  async function loadRoundIntoWorkspace(r: any) {
-    if (!auth.arenaId || roundStore.state === "RUNNING") return;
-    loadingRounds = true;
+  $effect(() => {
+    const arenaId = auth.arenaId;
+    const eventId = roundStore.eventId;
+    untrack(() => void fetchEventRounds(arenaId, eventId));
+  });
+
+  async function loadRoundIntoWorkspace(r: Row) {
+    const { arenaId } = auth;
+    const { eventId, eventName } = roundStore;
+    const request = requestVersion;
+    if (!arenaId || r.event_id !== eventId || engine.active || roundStore.state === "RUNNING" || selectingRound) return;
+    selectingRound = true;
     roundsError = "";
     try {
-      const [partsRes, judgesRes] = await Promise.allSettled([
-        api.cloud<any[]>(`/arenas/${auth.arenaId}/rounds/${r.id}/participants`),
-        api.cloud<any[]>(`/arenas/${auth.arenaId}/rounds/${r.id}/judges`),
+      const path = `/arenas/${encodeURIComponent(arenaId)}/rounds/${encodeURIComponent(r.id)}`;
+      const [parts, judges] = await Promise.all([
+        api.cloud<Row[]>(path + "/participants"),
+        api.cloud<Row[]>(path + "/judges"),
       ]);
-      const parts =
-        partsRes.status === "fulfilled" && Array.isArray(partsRes.value)
-          ? partsRes.value.sort((a, b) => (a.gantangan_number || 0) - (b.gantangan_number || 0))
-          : [];
-      const judges =
-        judgesRes.status === "fulfilled" && Array.isArray(judgesRes.value) ? judgesRes.value : [];
+      if (request !== requestVersion || roundStore.eventId !== eventId || auth.arenaId !== arenaId || engine.active) return;
 
-      const mappedParticipants: ParticipantMapping[] = parts.map((p) => {
-        const num = p.gantangan_number || 1;
+      const mappedParticipants: ParticipantMapping[] = (parts ?? []).filter((p) => Number.isInteger(p.gantangan_number) && p.gantangan_number >= 1 && p.gantangan_number <= 24).map((p) => {
+        const num = p.gantangan_number;
         return {
           registrationId: p.id,
           gantanganId: p.gantangan_id,
           gantanganNumber: num,
-          birdName: p.bird_name || `Gantangan ${num}`,
+          birdName: p.bird_name || "",
           birdCode: p.bird_code,
-          ownerName: p.owner_name || p.participant_name || p.registrant_name || "Pemilik",
+          ownerName: p.owner_name || p.participant_name || p.registrant_name || "",
           ownerPhone: p.owner_phone || p.participant_phone || p.registrant_phone || "",
-          channelId: `cam-${String(num).padStart(2, "0")}`,
+          channelId: engine.channels[num - 1]?.id,
         };
       });
 
-      const formattedJurors =
-        judges.length > 0
-          ? judges.map((j: any) => j.judge_name || j.name || "Juri")
-          : [r.field_judge_1, r.field_judge_2, r.field_judge_3, r.field_judge_4].filter(Boolean);
+      const assigned = [r.field_judge_1, r.field_judge_2, r.field_judge_3, r.field_judge_4];
+      const formattedJurors = assigned.some(Boolean)
+        ? assigned.map((name) => name || "")
+        : (judges ?? []).slice(0, 4).map((judge) => judge.judge_name || "");
 
       roundStore.setCloudRound({
-        eventId: r.event_id || "",
+        eventId,
         roundId: r.id,
-        eventName: r.event_title || "Event Lomba",
+        eventName,
         sessionName: r.title || `Sesi ${r.round_number}`,
-        startTime: r.start_time || "09:00",
-        endTime: r.end_time || "09:10",
-        jurors: formattedJurors.length > 0 ? formattedJurors : ["Juri 1", "Juri 2", "Juri 3", "Juri 4"],
+        startTime: r.start_time || "",
+        endTime: r.end_time || "",
+        jurors: formattedJurors,
         participants: mappedParticipants,
       });
-    } catch (err: any) {
-      roundsError = message(err);
+    } catch (err) {
+      if (request === requestVersion) roundsError = message(err);
     } finally {
-      loadingRounds = false;
+      selectingRound = false;
     }
   }
-
-  onMount(() => {
-    void fetchTodayRounds();
-  });
 
   const gantanganRows = $derived.by(() => {
     const q = search.trim().toLowerCase();
@@ -220,18 +214,13 @@
     activeNumbers.filter((num) => roundStore.isGantanganChecked(roundStore.roundId, num)).length
   );
 
-  const jurorList = $derived(
-    roundStore.jurors.length > 0
-      ? roundStore.jurors
-      : ["Juri 1", "Juri 2", "Juri 3", "Juri 4"]
-  );
+  const jurorList = $derived(roundStore.jurors);
 </script>
 
 <div class="flex h-full w-full flex-col overflow-hidden bg-background text-foreground select-none">
   <OperatorHeader
-    {openingEditModal}
+    {selectingRound}
     onOpenCloudModal={() => (showCloudModal = true)}
-    onOpenEditModal={() => (showEditModal = true)}
     onStopRound={handleStopClick}
   />
 
@@ -245,18 +234,18 @@
             <Trophy class="h-4 w-4 text-amber-400" />
             <div>
               <h2 class="text-xs font-extrabold uppercase tracking-wider text-foreground">
-                Checklist Ronde Hari Ini
+                Checklist Ronde Event
               </h2>
               <p class="text-[11px] text-muted-foreground">
-                Pilih sesi lomba untuk mengontrol Start/Stop & verifikasi gantangan
+                {roundStore.eventName || "Pilih event cloud untuk melihat ronde."}
               </p>
             </div>
           </div>
           <Button
             variant="outline"
             size="sm"
-            disabled={loadingRounds}
-            onclick={fetchTodayRounds}
+            disabled={loadingRounds || selectingRound || !roundStore.eventId}
+            onclick={() => fetchEventRounds()}
             class="h-7 gap-1 text-[11px]"
           >
             <RefreshCw class="h-3 w-3 {loadingRounds ? 'animate-spin' : ''}" />
@@ -274,14 +263,14 @@
         <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1">
           {#if cloudRounds.length === 0}
             <div class="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-              {loadingRounds ? "Memuat daftar ronde..." : "Belum ada data ronde dari Cloud. Klik Pilih Sesi Cloud."}
+              {loadingRounds ? "Memuat daftar ronde…" : roundStore.eventId ? "Belum ada ronde untuk event terpilih." : "Pilih event cloud terlebih dahulu."}
             </div>
           {:else}
             {#each cloudRounds as r}
               {@const isActive = roundStore.roundId === r.id}
               <button
                 type="button"
-                disabled={roundStore.state === "RUNNING"}
+                disabled={selectingRound || engine.active || roundStore.state === "RUNNING"}
                 onclick={() => loadRoundIntoWorkspace(r)}
                 class="w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition {isActive
                   ? 'border-emerald-500/60 bg-emerald-500/10'
@@ -292,7 +281,7 @@
                     <span class="text-xs font-bold text-foreground truncate">{r.title}</span>
                     {#if isActive}
                       <span class="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400 uppercase">
-                        Aktif
+                        Dipilih
                       </span>
                     {/if}
                   </div>
@@ -306,9 +295,6 @@
                     {/if}
                   </div>
                 </div>
-                <span class="shrink-0 rounded border border-border bg-card px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                  {r.status}
-                </span>
               </button>
             {/each}
           {/if}
@@ -338,14 +324,14 @@
         <div class="grid gap-2.5 sm:grid-cols-2">
           {#each jurorList as juri, idx}
             {@const currentZone = getJudgeAssignedZone(idx, roundStore.currentShift)}
-            {@const schedule = getJudgeRotationSchedule(idx, roundStore.startTime || "09:00", roundStore.shiftDurationSeconds)}
+            {@const schedule = roundStore.startTime ? getJudgeRotationSchedule(idx, roundStore.startTime, roundStore.shiftDurationSeconds) : []}
             <div class="rounded-lg border border-border bg-muted/40 p-2.5 space-y-2">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2 min-w-0">
                   <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-sky-500/20 font-mono text-[11px] font-black text-sky-400 border border-sky-500/30">
                     J{idx + 1}
                   </span>
-                  <span class="text-xs font-bold text-foreground truncate">{juri}</span>
+                  <span class="text-xs font-bold text-foreground truncate">{juri || "Belum ditetapkan"}</span>
                 </div>
                 <span class="shrink-0 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 font-mono text-[10px] font-extrabold text-emerald-400">
                   Aktif: Zona {currentZone}
@@ -368,6 +354,8 @@
                 {/each}
               </div>
             </div>
+          {:else}
+            <p class="col-span-full text-xs text-muted-foreground">{roundStore.roundId ? "Cloud belum menetapkan juri untuk ronde ini." : "Pilih ronde untuk melihat daftar juri."}</p>
           {/each}
         </div>
       </section>
@@ -427,7 +415,11 @@
 
       {#if !roundStore.roundId}
         <div class="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center text-xs text-muted-foreground">
-          Belum ada ronde aktif yang dipilih. Klik <strong class="text-foreground">Pilih Sesi Cloud</strong> atau pilih salah satu ronde pada panel <strong class="text-foreground">Checklist Ronde Hari Ini</strong> di atas.
+          {#if roundStore.eventId}
+            Pilih ronde dari daftar <strong class="text-foreground">Checklist Ronde Event</strong>.
+          {:else}
+            Pilih tanggal dan event lewat <strong class="text-foreground">Pilih Event Cloud</strong>.
+          {/if}
         </div>
       {:else}
         <div class="overflow-x-auto rounded-lg border border-border">
@@ -520,21 +512,6 @@
     </section>
   </div>
 </div>
-
-<RoundConfigModal
-  open={showEditModal}
-  initialConfig={{
-    roundId: roundStore.roundId,
-    eventName: roundStore.eventName,
-    sessionName: roundStore.sessionName,
-    startTime: roundStore.startTime,
-    endTime: roundStore.endTime,
-    totalDurationSeconds: roundStore.totalDurationSeconds,
-    shiftDurationSeconds: roundStore.shiftDurationSeconds,
-    jurors: roundStore.jurors,
-  }}
-  onClose={() => (showEditModal = false)}
-/>
 
 <CloudSessionSelector open={showCloudModal} onClose={() => (showCloudModal = false)} />
 

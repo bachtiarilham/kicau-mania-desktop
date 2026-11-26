@@ -6,7 +6,7 @@
   import { roundStore } from "$lib/state/round.svelte";
   import { engine } from "$lib/state/engine.svelte";
   import { api } from "$lib/services/api";
-  import { MOCK_GANTANGAN_STREAMS } from "$lib/services/livestream.mock";
+  import { cameraSlots } from "$lib/components/cameras/camera-slots";
   import type { ZoneId } from "$lib/models";
 
   let selectedFilter = $state<"all" | ZoneId>("all");
@@ -14,17 +14,7 @@
   let audibleId = $state<string | null>(null);
   let zoomed = $state<Record<string, number>>({});
 
-  let allStreams = $derived.by(() => {
-    return MOCK_GANTANGAN_STREAMS.map((m, idx) => {
-      const realChan = engine.channels[idx];
-      return {
-        ...m,
-        id: realChan?.id ?? m.id,
-        isLive: engine.connected || engine.running,
-        channelIndex: idx,
-      };
-    });
-  });
+  const allStreams = $derived(cameraSlots(engine.channels));
 
   let filteredStreams = $derived.by(() => {
     if (selectedFilter === "all") return allStreams;

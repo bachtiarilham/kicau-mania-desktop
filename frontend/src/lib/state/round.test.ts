@@ -64,9 +64,9 @@ describe("roundStore and judge rotation matrix", () => {
     });
     expect(roundStore.eventName).toBe("Piala Presiden 2026");
     expect(roundStore.sessionName).toBe("Sesi 2");
-    expect(roundStore.totalDurationSeconds).toBe(1200);
-    expect(roundStore.roundRemainingSeconds).toBe(1200);
-    expect(roundStore.shiftDurationSeconds).toBe(300);
+    expect(roundStore.totalDurationSeconds).toBe(600);
+    expect(roundStore.roundRemainingSeconds).toBe(600);
+    expect(roundStore.shiftDurationSeconds).toBe(150);
     expect(roundStore.jurors).toEqual([]);
   });
 
@@ -78,6 +78,31 @@ describe("roundStore and judge rotation matrix", () => {
     roundStore.stopRound();
     expect(roundStore.state).toBe("FINISHED");
     expect(roundStore.timeUpDialog).toBe(false);
+  });
+
+  it("starts a fresh 10-minute timer after stopping a round early", () => {
+    roundStore.startRound();
+    roundStore.roundRemainingSeconds = 420;
+    roundStore.shiftRemainingSeconds = 120;
+    roundStore.currentShift = 2;
+    roundStore.stopRound();
+    roundStore.startRound();
+
+    expect(roundStore.roundRemainingSeconds).toBe(600);
+    expect(roundStore.shiftRemainingSeconds).toBe(150);
+    expect(roundStore.currentShift).toBe(1);
+    roundStore.stopRound();
+  });
+
+  it("clears the previous ronde and judges only when changing events", () => {
+    roundStore.selectCloudEvent("event-1", "Updated event name");
+    expect(roundStore.roundId).toBe("round-1");
+    expect(roundStore.eventName).toBe("Updated event name");
+    roundStore.selectCloudEvent("event-2", "Next event");
+    expect(roundStore.eventId).toBe("event-2");
+    expect(roundStore.roundId).toBe("");
+    expect(roundStore.jurors).toEqual([]);
+    expect(roundStore.participants).toEqual([]);
   });
 
   it("supports continuing round when time is up", () => {

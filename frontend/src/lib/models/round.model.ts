@@ -20,17 +20,3 @@ export interface JudgeZoneScheduleItem {
   startClock: string;
   endClock: string;
 }
-
-export interface RoundConfig {
-  eventName: string;
-  sessionName: string;
-  startTime: string;
-  endTime: string;
-  jurors: string[];
-  totalDurationSeconds?: number;
-  shiftDurationSeconds?: number;
-  durationSeconds?: number;
-  eventId?: string;
-  roundId?: string;
-  participants?: ParticipantMapping[];
-}
