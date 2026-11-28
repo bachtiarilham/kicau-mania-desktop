@@ -33,6 +33,12 @@ func (u *usecase) Bootstrap(ctx context.Context) (map[string]any, error) {
 }
 
 func (u *usecase) Engine(ctx context.Context, method, path string, body map[string]any) (any, error) {
+	if method == "GET" && path == "/api/v1/local/round" ||
+		method == "POST" && (path == "/api/v1/local/round/start" || path == "/api/v1/local/round/stop") {
+		var out any
+		err := u.engine.Call(ctx, method, path, body, &out)
+		return out, err
+	}
 	if !strings.HasPrefix(path, "/api/v1/") || strings.Contains(path, "bootstrap") || strings.Contains(path, "/file") {
 		return nil, errors.New("Endpoint engine tidak diizinkan")
 	}

@@ -2,6 +2,8 @@
 
 Dokumen ini mendefinisikan peta interaksi untuk halaman **Checklist & Kontrol Ronde** (`RoundChecklistPage`, `tab === "checklist"`), yang memusatkan kontrol Start/Stop ronde, daftar ronde hari ini, monitoring posisi & waktu rotasi juri, serta checklist verifikasi burung–gantangan–WhatsApp.
 
+Jadwal ronde 10 menit dan sinkronisasi waktu Operator–Juri yang ditargetkan dijelaskan di [Aturan Ronde Operator dan Juri](./07-competition-round-flow.md).
+
 ---
 
 ## Fitur 6.1: Kontrol Siklus Ronde (Start, Stop, Reset, Pilih Sesi Cloud)

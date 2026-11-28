@@ -6,15 +6,18 @@
   import { roundStore } from "$lib/state/round.svelte";
   import { engine } from "$lib/state/engine.svelte";
   import { api } from "$lib/services/api";
-  import { cameraSlots } from "$lib/components/cameras/camera-slots";
+  import { arenaCameraID, cameraSlots } from "$lib/components/cameras/camera-slots";
+  import NativePlayer from "$lib/components/cameras/native-player.svelte";
   import type { ZoneId } from "$lib/models";
 
   let selectedFilter = $state<"all" | ZoneId>("all");
   let spotlightId = $state<string | null>(null);
+  let showArena = $state(false);
   let audibleId = $state<string | null>(null);
   let zoomed = $state<Record<string, number>>({});
 
   const allStreams = $derived(cameraSlots(engine.channels));
+  const arenaConfigured = $derived(engine.channels.some((channel) => channel.id === arenaCameraID));
 
   let filteredStreams = $derived.by(() => {
     if (selectedFilter === "all") return allStreams;
@@ -45,6 +48,7 @@
           onclick={() => {
             selectedFilter = "all";
             spotlightId = null;
+            showArena = false;
           }}
           class="rounded px-2.5 py-1 text-xs font-semibold transition {selectedFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
         >
@@ -57,6 +61,7 @@
             onclick={() => {
               selectedFilter = z;
               spotlightId = null;
+              showArena = false;
             }}
             class="rounded px-2.5 py-1 text-xs font-semibold transition {selectedFilter === z ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
           >
@@ -64,6 +69,13 @@
           </button>
         {/each}
       </div>
+
+      {#if arenaConfigured}
+        <Button size="sm" variant={showArena ? "default" : "outline"} onclick={() => {
+          spotlightId = null;
+          showArena = !showArena;
+        }}>Kamera Umum Arena</Button>
+      {/if}
 
       {#if spotlightId}
         <Button
@@ -91,13 +103,15 @@
       {/if}
       <span class="flex items-center gap-1.5 font-mono text-[11px]">
         <Video class="h-3.5 w-3.5 text-primary" />
-        <span>{filteredStreams.length} Kamera Live</span>
+        <span>{showArena ? "Kamera Umum Arena" : `${filteredStreams.length} Kamera Live`}</span>
       </span>
     </div>
   </section>
 
-  <main class="min-h-0 flex-1 {selectedFilter === 'all' ? 'overflow-y-auto p-2.5 sm:p-3' : 'overflow-hidden p-2 flex flex-col'}">
-    {#if spotlightStream}
+  <main class="min-h-0 flex-1 {selectedFilter === 'all' && !showArena ? 'overflow-y-auto p-2.5 sm:p-3' : 'overflow-hidden p-2 flex flex-col'}">
+    {#if showArena && arenaConfigured}
+      <NativePlayer id={arenaCameraID} class="h-full w-full overflow-hidden rounded-lg bg-black" />
+    {:else if spotlightStream}
       <SpotlightView
         stream={spotlightStream}
         zoom={zoomed[spotlightStream.id] ?? 100}

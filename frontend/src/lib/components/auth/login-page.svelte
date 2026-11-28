@@ -25,6 +25,8 @@
 
   let showServerConfig = $state(false);
   let currentCloudUrl = $state("https://dev.megaallstararena.com/api/v1");
+  let localUrl = $state("");
+  let rtspBase = $state("");
   let savingUrl = $state(false);
   let urlMessage = $state("");
 
@@ -47,24 +49,31 @@
       .config()
       .then((cfg) => {
         if (cfg?.cloud_url) currentCloudUrl = cfg.cloud_url;
+        localUrl = cfg?.local_url ?? "";
+        rtspBase = cfg?.rtsp_base ?? "";
       })
       .catch(() => {});
   });
 
   async function handleSaveCloudUrl() {
-    if (!currentCloudUrl.trim()) {
-      urlMessage = "Gagal: URL server tidak boleh kosong";
+    if (![currentCloudUrl, localUrl, rtspBase].every((url) => url.trim())) {
+      urlMessage = "Gagal menyimpan. Isi alamat Cloud, API arena, dan RTSP.";
       return;
     }
     savingUrl = true;
     urlMessage = "";
     try {
       const existing = await api.config();
+      const restartNeeded = existing.local_url !== localUrl.trim();
       await api.saveConfig({
         ...existing,
         cloud_url: currentCloudUrl.trim(),
+        local_url: localUrl.trim(),
+        rtsp_base: rtspBase.trim(),
       });
-      urlMessage = "Berhasil: Alamat server cloud telah disimpan";
+      urlMessage = restartNeeded
+        ? "Alamat disimpan. Buka ulang aplikasi untuk memakai API arena yang baru."
+        : "Alamat server disimpan.";
     } catch (err: any) {
       urlMessage = "Gagal: " + (message(err) || "Format URL cloud tidak valid");
     } finally {
@@ -105,7 +114,7 @@
       const userName = profile?.name || profile?.nickname || "";
       const arenaId = profile?.active_scope?.arena_id || profile?.arena_roles?.[0]?.arena_id || profile?.arena_id || "";
       roundStore.clearCloudRound();
-      auth.login(role, profile?.email || email.trim(), userName, undefined, arenaId);
+      auth.login(role, profile?.email || email.trim(), userName, String(profile?.id ?? ""), String(arenaId));
     } catch (err: any) {
       error = message(err) || "Gagal terhubung ke server atau kredensial salah.";
     } finally {
@@ -230,16 +239,24 @@
 
         {#if showServerConfig}
           <div class="mt-3 rounded-xl border border-border bg-muted/60 p-3 space-y-2.5">
-            <div class="text-[10px] text-muted-foreground">
-              Alamat HTTPS API Cloud Server (contoh: <code>https://dev.megaallstararena.com/api/v1</code>).
-            </div>
-            <div class="flex gap-2">
+            <label class="grid gap-1 text-xs">
+              API Cloud
               <Input
                 type="text"
                 bind:value={currentCloudUrl}
                 placeholder="https://api.domain.com/api/v1"
                 class="bg-card text-xs font-mono"
               />
+            </label>
+            <label class="grid gap-1 text-xs">
+              API arena
+              <Input type="text" bind:value={localUrl} placeholder="http://192.168.1.6:8090" class="bg-card text-xs font-mono" />
+            </label>
+            <label class="grid gap-1 text-xs">
+              RTSP MediaMTX
+              <Input type="text" bind:value={rtspBase} placeholder="rtsp://192.168.1.6:8554" class="bg-card text-xs font-mono" />
+            </label>
+            <div class="flex justify-end">
               <Button
                 type="button"
                 size="sm"

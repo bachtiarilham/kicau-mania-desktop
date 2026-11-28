@@ -7,8 +7,8 @@ class AuthStore {
   role = $state<UserRole | null>(null);
   userEmail = $state("");
   userName = $state("");
+  userId = $state("");
   arenaId = $state("");
-  judgeIndex = $state(0); // 0 = Juri 1, 1 = Juri 2, 2 = Juri 3, 3 = Juri 4
 
   constructor() {
     this.loadFromStorage();
@@ -25,10 +25,8 @@ class AuthStore {
           this.role = parsed.role;
           this.userEmail = parsed.userEmail || "";
           this.userName = parsed.userName || "";
+          this.userId = parsed.userId || "";
           this.arenaId = parsed.arenaId || "";
-          if (typeof parsed.judgeIndex === "number") {
-            this.judgeIndex = parsed.judgeIndex;
-          }
         }
       }
     } catch {
@@ -46,8 +44,8 @@ class AuthStore {
           role: this.role,
           userEmail: this.userEmail,
           userName: this.userName,
+          userId: this.userId,
           arenaId: this.arenaId,
-          judgeIndex: this.judgeIndex,
         })
       );
     } catch {
@@ -55,8 +53,8 @@ class AuthStore {
     }
   }
 
-  setJudgeIndex(idx: number) {
-    this.judgeIndex = Math.max(0, Math.min(3, idx));
+  setUserId(id: string) {
+    this.userId = id;
     this.saveToStorage();
   }
 
@@ -65,27 +63,13 @@ class AuthStore {
     this.saveToStorage();
   }
 
-  login(role: UserRole, email?: string, name?: string, judgeIdx?: number, arenaId?: string) {
+  login(role: UserRole, email?: string, name?: string, userId?: string, arenaId?: string) {
     this.isLoggedIn = true;
     this.role = role;
     this.userEmail = email || (role === "juri" ? "juri@kicaumania.com" : role === "operator" ? "operator@kicaumania.com" : "admin@kicaumania.com");
     this.userName = name || (role === "juri" ? "Dewan Juri Arena" : role === "operator" ? "Operator Arena" : "Administrator");
+    this.userId = userId || "";
     this.arenaId = arenaId || "";
-
-    if (typeof judgeIdx === "number") {
-      this.judgeIndex = Math.max(0, Math.min(3, judgeIdx));
-    } else if (role === "juri") {
-      const combined = (this.userEmail + " " + this.userName).toLowerCase();
-      if (combined.includes("juri 4") || combined.includes("juri4")) {
-        this.judgeIndex = 3;
-      } else if (combined.includes("juri 3") || combined.includes("juri3")) {
-        this.judgeIndex = 2;
-      } else if (combined.includes("juri 2") || combined.includes("juri2")) {
-        this.judgeIndex = 1;
-      } else {
-        this.judgeIndex = 0;
-      }
-    }
 
     this.saveToStorage();
   }
@@ -95,6 +79,7 @@ class AuthStore {
     this.role = null;
     this.userEmail = "";
     this.userName = "";
+    this.userId = "";
     this.arenaId = "";
     if (typeof localStorage !== "undefined") {
       localStorage.removeItem(AUTH_STORAGE_KEY);

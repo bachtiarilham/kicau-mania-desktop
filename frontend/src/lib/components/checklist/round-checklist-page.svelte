@@ -18,6 +18,7 @@
   import OperatorHeader from "../operator/operator-header.svelte";
   import QuickSaveModal from "../operator/modals/quick-save-modal.svelte";
   import RoundTimeUpDialog from "../sessions/round-timeup-dialog.svelte";
+  import { gantanganChannels } from "../cameras/camera-slots";
   import CloudSessionSelector from "../sessions/cloud-session-selector.svelte";
   import {
     roundStore,
@@ -65,8 +66,8 @@
     return `${cleanEvent}_${cleanSession}_${dateStr}`;
   }
 
-  function handleStopClick() {
-    roundStore.stopRound();
+  async function handleStopClick() {
+    if (!(await roundStore.stopRound())) return;
     if (!sessionName) {
       sessionName = generateSessionName();
     }
@@ -127,7 +128,7 @@
     const { arenaId } = auth;
     const { eventId, eventName } = roundStore;
     const request = requestVersion;
-    if (!arenaId || r.event_id !== eventId || engine.active || roundStore.state === "RUNNING" || selectingRound) return;
+    if (!arenaId || r.event_id !== eventId || engine.active || roundStore.busy || roundStore.state === "RUNNING" || selectingRound) return;
     selectingRound = true;
     roundsError = "";
     try {
@@ -138,6 +139,7 @@
       ]);
       if (request !== requestVersion || roundStore.eventId !== eventId || auth.arenaId !== arenaId || engine.active) return;
 
+      const channels = gantanganChannels(engine.channels);
       const mappedParticipants: ParticipantMapping[] = (parts ?? []).filter((p) => Number.isInteger(p.gantangan_number) && p.gantangan_number >= 1 && p.gantangan_number <= 24).map((p) => {
         const num = p.gantangan_number;
         return {
@@ -148,7 +150,7 @@
           birdCode: p.bird_code,
           ownerName: p.owner_name || p.participant_name || p.registrant_name || "",
           ownerPhone: p.owner_phone || p.participant_phone || p.registrant_phone || "",
-          channelId: engine.channels[num - 1]?.id,
+          channelId: channels[num - 1]?.id,
         };
       });
 
@@ -165,6 +167,14 @@
         startTime: r.start_time || "",
         endTime: r.end_time || "",
         jurors: formattedJurors,
+        jurorIds: formattedJurors.map((name, index) => {
+          if (!assigned.some(Boolean)) return String(judges?.[index]?.judge_user_id ?? "");
+          const normalized = name.trim().toLocaleLowerCase("id-ID").replace(/\s+/g, " ");
+          const matches = (judges ?? []).filter((judge) =>
+            normalized && String(judge.judge_name ?? "").trim().toLocaleLowerCase("id-ID").replace(/\s+/g, " ") === normalized,
+          );
+          return matches.length === 1 ? String(matches[0].judge_user_id ?? "") : "";
+        }),
         participants: mappedParticipants,
       });
     } catch (err) {
@@ -270,7 +280,7 @@
               {@const isActive = roundStore.roundId === r.id}
               <button
                 type="button"
-                disabled={selectingRound || engine.active || roundStore.state === "RUNNING"}
+                disabled={selectingRound || engine.active || roundStore.busy || roundStore.state === "RUNNING"}
                 onclick={() => loadRoundIntoWorkspace(r)}
                 class="w-full flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition {isActive
                   ? 'border-emerald-500/60 bg-emerald-500/10'
@@ -311,20 +321,20 @@
                 Monitoring Posisi & Waktu Rotasi Juri
               </h2>
               <p class="text-[11px] text-muted-foreground">
-                Pantau juri sedang berada di Zona mana & rentang waktu per shift ({roundStore.shiftDurationSeconds} detik/shift)
+                Pantau zona aktif dan checklist otomatis setiap juri.
               </p>
             </div>
           </div>
           <div class="flex items-center gap-1.5 rounded-lg border border-border bg-muted px-2.5 py-1 font-mono text-[11px] font-bold">
             <Clock class="h-3.5 w-3.5 text-amber-400" />
-            <span>Shift {roundStore.currentShift}/4</span>
+            <span>{roundStore.intervalLabel}</span>
           </div>
         </div>
 
         <div class="grid gap-2.5 sm:grid-cols-2">
           {#each jurorList as juri, idx}
-            {@const currentZone = getJudgeAssignedZone(idx, roundStore.currentShift)}
-            {@const schedule = roundStore.startTime ? getJudgeRotationSchedule(idx, roundStore.startTime, roundStore.shiftDurationSeconds) : []}
+            {@const currentZone = getJudgeAssignedZone(idx, roundStore.elapsedSeconds)}
+            {@const schedule = getJudgeRotationSchedule(idx)}
             <div class="rounded-lg border border-border bg-muted/40 p-2.5 space-y-2">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2 min-w-0">
@@ -340,15 +350,19 @@
 
               <div class="grid grid-cols-2 gap-1">
                 {#each schedule as item}
-                  {@const isCurrent = item.shift === roundStore.currentShift}
+                  {@const isCurrent = !roundStore.interval.final && item.shift === roundStore.interval.index + 1}
+                  {@const checked = roundStore.isJudgeZoneChecked(roundStore.roundId, idx, item.zone)}
                   <div
                     class="flex items-center justify-between rounded px-2 py-1 text-[10px] font-mono border {isCurrent
                       ? 'border-primary bg-primary/15 text-foreground font-bold'
-                      : item.shift < roundStore.currentShift
-                      ? 'border-border/50 bg-card/40 text-muted-foreground line-through'
+                      : checked
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-foreground'
                       : 'border-border bg-card text-muted-foreground'}"
                   >
-                    <span>S{item.shift} · Z{item.zone}</span>
+                    <span class="flex items-center gap-1">
+                      {#if checked}<CheckSquare class="size-3 text-emerald-500" aria-label="Selesai" />{/if}
+                      S{item.shift} · Z{item.zone}
+                    </span>
                     <span>{item.startClock}-{item.endClock}</span>
                   </div>
                 {/each}

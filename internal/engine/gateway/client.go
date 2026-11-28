@@ -129,7 +129,7 @@ func (c *Client) Metrics(ctx context.Context, emit func(any)) {
 		header := http.Header{}
 		header.Set("X-Local-Control", c.Nonce())
 		conn, res, e := dial.DialContext(ctx, base+"/api/v1/local/preview-metrics", header)
-		if e != nil && res != nil && res.StatusCode == http.StatusNotFound {
+		if e != nil && res != nil && (res.StatusCode == http.StatusNotFound || res.StatusCode == http.StatusForbidden) {
 			conn, _, e = dial.DialContext(ctx, base+"/api/v1/metrics", nil)
 		}
 		if e == nil {

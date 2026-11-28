@@ -2,6 +2,14 @@
 
 Dokumen ini mendefinisikan peta interaksi untuk konfigurasi preferensi tampilan (*Dark/Light Mode*), integrasi edge engine lokal, serta kalibrasi audio dan subnet LAN (`SettingsPage`).
 
+## Pengaturan Arena
+
+Operator dan admin membuka **Pengaturan Arena** di desktop PC server untuk memilih IP LAN operator, mengisi hingga empat IP PC juri, dan mengatur IP NVR. IP router menampilkan gateway yang sedang dipakai Windows untuk IP server tersimpan.
+
+Daftar CCTV menyediakan 24 slot gantangan dan satu **Kamera Umum Arena**. **Tes NVR** memeriksa port RTSP 554. **Tes Video** memeriksa sumber RTSP tiap kamera. Kamera umum dapat dibuka dari layar Livestream operator.
+
+Simpan pengaturan untuk memperbarui `.env` Local App. Mulai ulang Local App saat ronde dan rekaman sudah berhenti. Di PC juri, atur alamat server melalui **Server → Ubah** di layar login.
+
 ---
 
 ## Fitur 5.1: Penggantian Tema Antarmuka (Dark / Light Theme)

@@ -81,7 +81,7 @@
               {Math.floor(roundStore.roundRemainingSeconds / 60)}:{String(roundStore.roundRemainingSeconds % 60).padStart(2, "0")}
             </span>
             <span class="text-xs font-bold text-amber-400">
-              Shift {roundStore.currentShift}/4 · {roundStore.shiftRemainingSeconds}s
+              {roundStore.intervalLabel} · {roundStore.shiftRemainingSeconds}s
             </span>
           </div>
         </div>
@@ -89,7 +89,7 @@
         <button
           type="button"
           onclick={() => roundStore.resetRound()}
-          disabled={!roundStore.roundId || roundStore.state === "RUNNING"}
+          disabled={roundStore.busy || !roundStore.roundId || roundStore.state === "RUNNING"}
           class="flex h-6 w-6 items-center justify-center rounded-lg bg-accent text-muted-foreground transition hover:bg-accent hover:text-foreground"
           title="Reset timer ke awal ronde"
         >
@@ -101,7 +101,7 @@
       <div class="flex items-center gap-2">
         <button
           type="button"
-          disabled={selectingRound || !roundStore.roundId || roundStore.state === "RUNNING"}
+          disabled={selectingRound || roundStore.busy || !roundStore.roundId || roundStore.state === "RUNNING"}
           onclick={() => roundStore.startRound()}
           class="group relative flex h-10 items-center gap-2 rounded-full px-5 text-xs font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed {roundStore.state === 'RUNNING' ? 'bg-emerald-600/60 shadow-emerald-600/20' : 'bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 active:scale-95 shadow-emerald-500/30 hover:shadow-emerald-500/50'}"
         >
@@ -116,7 +116,7 @@
 
         <button
           type="button"
-          disabled={roundStore.state === "IDLE" || roundStore.state === "FINISHED"}
+          disabled={roundStore.busy || roundStore.state !== "RUNNING"}
           onclick={onStopRound}
           class="flex h-10 items-center gap-2 rounded-full px-5 text-xs font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 shadow-red-600/30 hover:shadow-red-600/50"
         >
@@ -128,4 +128,7 @@
       </div>
     </div>
   </div>
+  {#if roundStore.commandError}
+    <p class="px-3 pb-2 text-xs text-destructive" role="alert">{roundStore.commandError}</p>
+  {/if}
 </section>

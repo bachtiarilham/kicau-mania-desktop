@@ -15,6 +15,7 @@
   } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import SettingsPage from "$lib/components/layout/settings-page.svelte";
+  import ArenaSettings from "$lib/components/layout/arena-settings.svelte";
   import Recordings from "$lib/components/recordings/recordings-page.svelte";
   import SessionBar from "$lib/components/sessions/session-bar.svelte";
   import LoginPage from "$lib/components/auth/login-page.svelte";
@@ -40,18 +41,19 @@
   }
 
   $effect(() => {
-    if (auth.role === "juri") {
-      tab = "cameras";
-    } else if (auth.role === "operator" && !["checklist", "operator", "cameras", "recordings"].includes(tab)) {
-      tab = "checklist";
+    if (checkingCloudSession || !auth.arenaId) return;
+    if (auth.role === "juri") return roundStore.followArena(auth.arenaId);
+    if (auth.role === "operator" || auth.role === "admin") {
+      void roundStore.recoverOperatorRound(auth.arenaId);
     }
   });
 
   const allNav = [
     { id: "checklist", label: "Checklist & Kontrol Ronde", icon: ClipboardCheck, roles: ["operator", "admin"] },
     { id: "operator", label: "Livestream (Full Video 24)", icon: LayoutDashboard, roles: ["operator", "admin"] },
-    { id: "cameras", label: "Monitor Juri (Grid 3x2)", icon: Cctv, roles: ["juri", "operator", "admin"] },
+    { id: "cameras", label: "Monitor Juri (Grid 3x2)", icon: Cctv, roles: ["admin"] },
     { id: "recordings", label: "Rekaman & Arsip", icon: HardDrive, roles: ["operator", "admin"] },
+    { id: "arena-settings", label: "Pengaturan Arena", icon: Settings, roles: ["operator", "admin"] },
     { id: "settings", label: "Pengaturan desktop", icon: Settings, roles: ["admin"] },
   ];
 
@@ -59,16 +61,22 @@
     allNav.filter((item) => auth.role && item.roles.includes(auth.role))
   );
 
+  $effect(() => {
+    if (auth.role === "operator" && !visibleNav.some((item) => item.id === tab)) {
+      tab = "checklist";
+    }
+  });
+
   onMount(() => {
     const off = engine.listen();
-    void engine.connect();
+    void engine.connect(auth.role === "juri");
     void verifyCloudSession();
     let pending = false;
     const timer = setInterval(async () => {
       if (pending) return;
       pending = true;
       try {
-        await engine.refresh();
+        await engine.refresh(auth.role === "juri");
       } finally {
         pending = false;
       }
@@ -86,6 +94,7 @@
       if (!profile?.id || (auth.userEmail && String(profile.email || "").toLowerCase() !== auth.userEmail.toLowerCase())) {
         throw Error("Identitas akun cloud berubah. Silakan masuk kembali.");
       }
+      auth.setUserId(String(profile.id));
     } catch (error) {
       cloudSessionError = message(error);
       roundStore.clearCloudRound();
@@ -96,6 +105,7 @@
   }
 
   async function navigate(id: string) {
+    if (!visibleNav.some((item) => item.id === id)) return;
     if ((tab === "cameras" || tab === "operator") && id !== tab) {
       await api.hidePlayers();
     }
@@ -110,6 +120,29 @@
   }
 </script>
 
+{#snippet workspaceBrand(workspace: string, onCollapse: () => void)}
+  <div class="flex items-center justify-between px-5 py-5">
+    <div class="flex items-center gap-3">
+      <div class="rounded-xl bg-primary p-2 text-primary-foreground">
+        <Cctv size={20} />
+      </div>
+      <div>
+        <div class="text-sm font-semibold tracking-tight">KICAU MANIA</div>
+        <div class="mt-0.5 text-[9px] tracking-[.2em] text-muted-foreground uppercase">{workspace}</div>
+      </div>
+    </div>
+    <button
+      type="button"
+      onclick={onCollapse}
+      aria-label="Ringkas panel samping"
+      title="Ringkas panel samping"
+      class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    >
+      <PanelLeftClose size={16} />
+    </button>
+  </div>
+{/snippet}
+
 {#if checkingCloudSession}
   <div class="grid h-screen place-items-center bg-background text-sm text-muted-foreground" role="status">Memeriksa sesi cloud…</div>
 {:else if !auth.isLoggedIn}
@@ -120,19 +153,16 @@
   <div class="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground select-none">
     <main class="min-h-0 flex-1 overflow-hidden">
       <ZoneGrid3x2>
-        {#snippet identity(collapsed)}
-          <header class="flex shrink-0 flex-col items-center gap-2 border-b border-border py-3 text-center {collapsed ? 'px-1' : 'px-4'}">
-            <span class="grid size-7 place-items-center rounded-lg bg-amber-500/20 text-xs font-bold text-amber-400 ring-1 ring-amber-500/30" aria-hidden="true">KM</span>
-            {#if !collapsed}
-              <h1 class="text-sm font-bold tracking-normal">Layar Penilaian Dewan Juri</h1>
-              <span class="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">JURI ARENA</span>
-              <span class="max-w-full truncate text-xs font-medium text-muted-foreground">{auth.userName}</span>
-            {/if}
-            <Button variant="outline" size={collapsed ? "icon-sm" : "sm"} onclick={handleLogout} aria-label="Ganti Akun" title="Ganti Akun">
+        {#snippet identity(onCollapse)}
+          {@render workspaceBrand("Juri Arena", onCollapse)}
+        {/snippet}
+        {#snippet account(collapsed)}
+          <div class="flex shrink-0 items-center border-t border-border {collapsed ? 'justify-center py-3' : 'justify-between gap-2 p-4'}">
+            {#if !collapsed}<span class="truncate text-[10px] text-muted-foreground">{auth.userEmail}</span>{/if}
+            <Button variant="ghost" size="icon-xs" onclick={handleLogout} aria-label="Ganti Akun" title="Ganti Akun" class="text-muted-foreground hover:text-foreground">
               <LogOut class="size-3.5" />
-              {#if !collapsed}Ganti Akun{/if}
             </Button>
-          </header>
+          </div>
         {/snippet}
       </ZoneGrid3x2>
     </main>
@@ -142,26 +172,7 @@
   <div class="flex h-screen overflow-hidden bg-background">
     {#if sidebarOpen}
       <aside class="flex w-56 shrink-0 flex-col border-r border-border bg-card relative z-20">
-        <div class="flex items-center justify-between px-5 py-5">
-          <div class="flex items-center gap-3">
-            <div class="rounded-xl bg-primary p-2 text-primary-foreground">
-              <Cctv size={20} />
-            </div>
-            <div>
-              <div class="text-sm font-semibold tracking-tight">KICAU MANIA</div>
-              <div class="mt-0.5 text-[9px] tracking-[.2em] text-muted-foreground uppercase">
-                {auth.role === "admin" ? "ADMIN WORKSPACE" : "OPERATOR WORKSPACE"}
-              </div>
-            </div>
-          </div>
-          <button
-            onclick={toggleSidebar}
-            title="Sembunyikan Sidebar"
-            class="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          >
-            <PanelLeftClose size={16} />
-          </button>
-        </div>
+        {@render workspaceBrand(auth.role === "admin" ? "Admin Workspace" : "Operator Workspace", toggleSidebar)}
 
         <div class="px-5 pb-2 text-[9px] tracking-[.2em] text-muted-foreground">
           MENU OPERASIONAL
@@ -269,7 +280,7 @@
           <div class="flex-1 min-h-0 w-full overflow-hidden">
             <OperatorDashboard />
           </div>
-        {:else if tab === "cameras"}
+        {:else if tab === "cameras" && auth.role === "admin"}
           <div class="flex-1 min-h-0 w-full overflow-hidden">
             <ZoneGrid3x2 />
           </div>
@@ -279,6 +290,8 @@
           <Recordings queue />
         {:else if tab === "archive"}
           <Recordings cloud />
+        {:else if tab === "arena-settings"}
+          <ArenaSettings />
         {:else if tab === "settings"}
           <SettingsPage />
         {:else}

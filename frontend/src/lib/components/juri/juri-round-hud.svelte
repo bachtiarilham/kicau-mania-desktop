@@ -1,368 +1,99 @@
 <script lang="ts">
-  import {
-    Trophy,
-    Clock,
-    Users,
-    Timer as TimerIcon,
-    AlertTriangle,
-    ChevronLeft,
-    ChevronRight,
-    Sparkles,
-    CheckCircle2,
-    ArrowRight,
-    CheckSquare,
-    Square as SquareIcon,
-  } from "@lucide/svelte";
+  import { CheckCircle2, Circle, PanelLeftClose, PanelLeftOpen } from "@lucide/svelte";
   import type { Snippet } from "svelte";
-  import {
-    roundStore,
-    getJudgeAssignedZone,
-    getJudgeRotationSchedule,
-  } from "$lib/state/round.svelte";
   import { auth } from "$lib/state/auth.svelte";
+  import { getJudgeAssignedZone, getJudgeRotationSchedule, roundStore } from "$lib/state/round.svelte";
 
-  interface Props {
+  let { collapsed = false, onToggleCollapse, identity, account }: {
     collapsed?: boolean;
-    onToggleCollapse?: () => void;
-    identity?: Snippet<[boolean]>;
+    onToggleCollapse: () => void;
+    identity?: Snippet<[() => void]>;
+    account?: Snippet<[boolean]>;
+  } = $props();
+
+  const judgeIndex = $derived(roundStore.judgeIndex);
+  const schedule = $derived(judgeIndex === null ? [] : getJudgeRotationSchedule(judgeIndex));
+  const assignedZone = $derived(judgeIndex === null ? null : getJudgeAssignedZone(judgeIndex, roundStore.elapsedSeconds));
+  const nextZone = $derived(judgeIndex === null || roundStore.nextZoneElapsed >= roundStore.totalDurationSeconds
+    ? null
+    : getJudgeAssignedZone(judgeIndex, roundStore.nextZoneElapsed));
+  const judgeName = $derived((judgeIndex === null ? "" : roundStore.jurors[judgeIndex]) || auth.userName || "—");
+
+  function scheduledTime(value: string) {
+    const clock = value.trim().match(/(?:^|T)(\d{1,2}):(\d{2})/);
+    return clock ? `${clock[1].padStart(2, "0")}:${clock[2]}` : value.trim() || "—";
   }
-
-  let { collapsed = false, onToggleCollapse, identity }: Props = $props();
-
-  const ZONE_INFO: Record<"A" | "B" | "C" | "D", { name: string; range: string }> = {
-    A: { name: "Zona A", range: "G01 – G06" },
-    B: { name: "Zona B", range: "G07 – G12" },
-    C: { name: "Zona C", range: "G13 – G18" },
-    D: { name: "Zona D", range: "G19 – G24" },
-  };
-
-  // Current judge's assigned zone
-  const myAssignedZone = $derived(
-    getJudgeAssignedZone(auth.judgeIndex, roundStore.currentShift)
-  );
-
-  const nextAssignedZone = $derived(
-    getJudgeAssignedZone(auth.judgeIndex, Math.min(4, roundStore.currentShift + 1))
-  );
-
-  const myZoneSchedule = $derived(
-    getJudgeRotationSchedule(
-      auth.judgeIndex,
-      roundStore.startTime || "09:00",
-      roundStore.shiftDurationSeconds
-    )
-  );
-
-  // Shift countdown progress (0 to 1)
-  const shiftProgress = $derived(
-    roundStore.shiftDurationSeconds > 0
-      ? Math.max(0, Math.min(1, roundStore.shiftRemainingSeconds / roundStore.shiftDurationSeconds))
-      : 0
-  );
-
-  // Round countdown progress (0 to 1)
-  const roundProgress = $derived(
-    roundStore.totalDurationSeconds > 0
-      ? Math.max(0, Math.min(1, roundStore.roundRemainingSeconds / roundStore.totalDurationSeconds))
-      : 0
-  );
-
-  const isLowShiftTime = $derived(
-    roundStore.shiftRemainingSeconds <= 30 && roundStore.shiftRemainingSeconds > 0
-  );
-  const isShiftTimeUp = $derived(
-    roundStore.shiftRemainingSeconds === 0 || roundStore.rotationAlert
-  );
-  const isRoundFinished = $derived(
-    roundStore.state === "FINISHED" || roundStore.roundRemainingSeconds === 0
-  );
-
-  const formattedShiftTime = $derived.by(() => {
-    const mins = Math.floor(roundStore.shiftRemainingSeconds / 60);
-    const secs = roundStore.shiftRemainingSeconds % 60;
-    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  });
-
-  const formattedRoundTime = $derived.by(() => {
-    const mins = Math.floor(roundStore.roundRemainingSeconds / 60);
-    const secs = roundStore.roundRemainingSeconds % 60;
-    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-  });
 </script>
 
-<aside class="flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-card {collapsed ? 'w-12' : 'w-80'}">
-  {@render identity?.(collapsed)}
-{#if collapsed}
-  <!-- Mini Collapsed Bar (Pill on Top-Left or Side) -->
-  <div
-    class="flex min-h-0 flex-1 flex-col items-center justify-between overflow-y-auto py-4"
-  >
-    <div class="flex flex-col items-center gap-3">
-      <button
-        type="button"
-        onclick={onToggleCollapse}
-        class="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-foreground transition hover:bg-accent"
-        title="Buka panel juri"
-      >
-        <ChevronRight class="h-4 w-4" />
-      </button>
+<aside aria-label="Info juri" class="relative z-20 flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-card {collapsed ? 'w-12' : 'w-56'}">
+  {#if collapsed}
+    <button type="button" onclick={onToggleCollapse} aria-label="Buka panel juri" title="Buka panel juri" class="mx-auto my-4 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+      <PanelLeftOpen size={16} />
+    </button>
+    {#if assignedZone}
+      <span class="mx-auto rounded-md bg-accent px-2 py-1 text-xs font-semibold text-primary" title={`Zona ${assignedZone}`}>{assignedZone}</span>
+    {/if}
+    <div class="flex-1"></div>
+  {:else}
+    {#if identity}
+      {@render identity(onToggleCollapse)}
+    {:else}
+      <div class="flex items-center justify-between px-5 py-5">
+        <span class="text-sm font-semibold">Info juri</span>
+        <button type="button" onclick={onToggleCollapse} aria-label="Ringkas panel juri" class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+          <PanelLeftClose size={16} />
+        </button>
+      </div>
+    {/if}
 
-      <span class="rounded bg-amber-500/20 p-1.5 text-amber-400">
-        <Trophy class="h-4 w-4" />
-      </span>
-
-      <!-- Mini Zone Badge -->
-      <span class="rounded bg-primary/20 px-1 py-0.5 text-[10px] font-black text-primary">
-        {myAssignedZone}
-      </span>
-    </div>
-
-    <!-- Vertical Timer Reading -->
-    <div class="flex flex-col items-center gap-1 font-mono">
-      <TimerIcon
-        class="h-4 w-4 {isShiftTimeUp ? 'animate-bounce text-red-400' : isLowShiftTime ? 'animate-pulse text-amber-400' : 'text-emerald-400'}"
-      />
-      <span
-        class="text-xs font-black tracking-wider {isShiftTimeUp ? 'text-red-400 font-bold' : isLowShiftTime ? 'text-amber-400' : 'text-foreground'}"
-      >
-        {roundStore.shiftRemainingSeconds}s
-      </span>
-      <span class="text-[9px] text-muted-foreground">S{roundStore.currentShift}/4</span>
-    </div>
-
-    <div class="h-4"></div>
-  </div>
-{:else}
-  <!-- Full Modern Broadcast-Grade HUD Sidebar -->
-  <div
-    class="relative flex min-h-0 flex-1 flex-col justify-between overflow-y-auto p-4 text-foreground"
-  >
-    <!-- Top: Event & Sesi Header -->
-    <div class="space-y-3.5">
-      <div class="flex items-center justify-between border-b border-border pb-3">
-        <div class="flex items-center gap-2">
-          <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 text-black shadow-md shadow-amber-500/20">
-            <Trophy class="h-4 w-4" />
+    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto">
+      <section aria-label="Informasi ronde">
+        <h2 class="px-5 pb-2 text-[9px] tracking-[.2em] text-muted-foreground uppercase">Info ronde</h2>
+        <dl class="space-y-1 px-3 text-xs">
+          <div class="rounded-lg bg-accent/65 px-3 py-2">
+            <dt class="text-[10px] text-muted-foreground">Nama juri</dt>
+            <dd class="break-words font-semibold">{judgeName}</dd>
           </div>
-          <div>
-            <div class="text-[10px] font-bold tracking-widest text-amber-400 uppercase">
-              Nama Event
+          <div class="rounded-lg px-3 py-2">
+            <dt class="text-[10px] text-muted-foreground">Nama event</dt>
+            <dd class="break-words font-semibold">{roundStore.eventName || "Menunggu ronde dari operator"}</dd>
+            {#if roundStore.sessionName}<dd class="break-words text-muted-foreground">{roundStore.sessionName}</dd>{/if}
+          </div>
+          <div class="rounded-lg px-3 py-2">
+            <dt class="text-[10px] text-muted-foreground">Jadwal ronde</dt>
+            <dd class="font-mono font-semibold tabular-nums">{scheduledTime(roundStore.startTime)} – {scheduledTime(roundStore.endTime)}</dd>
+          </div>
+        </dl>
+      </section>
+
+      {#if roundStore.roundId && judgeIndex !== null}
+        <section aria-label="Zona penilaian">
+          <h2 class="px-5 pb-2 text-[9px] tracking-[.2em] text-muted-foreground uppercase">Zona penilaian</h2>
+          <div class="space-y-1 px-3">
+            <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 rounded-lg bg-accent px-3 py-2 text-xs">
+              <strong class="text-primary">Zona {assignedZone}</strong>
+              {#if nextZone && roundStore.state === "RUNNING"}
+                <span class="text-[10px] text-muted-foreground">Lanjut ke {nextZone}</span>
+              {/if}
             </div>
-            <h2 class="text-sm font-extrabold tracking-tight text-foreground line-clamp-1">
-              {roundStore.eventName}
-            </h2>
-          </div>
-        </div>
-
-        {#if onToggleCollapse}
-          <button
-            type="button"
-            onclick={onToggleCollapse}
-            class="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground"
-            title="Sembunyikan panel"
-          >
-            <ChevronLeft class="h-4 w-4" />
-          </button>
-        {/if}
-      </div>
-
-      <!-- Sesi, Status, & Shift Section -->
-      <div class="rounded-xl border border-border bg-muted p-3 shadow-inner space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-black tracking-wider text-amber-400 uppercase">
-            {roundStore.sessionName} (10 MENIT)
-          </span>
-          <span
-            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase {roundStore.state === 'RUNNING' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-accent text-muted-foreground'}"
-          >
-            <span
-              class="h-1.5 w-1.5 rounded-full {roundStore.state === 'RUNNING' ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}"
-            ></span>
-            {roundStore.state}
-          </span>
-        </div>
-
-        <!-- Shift & Total Round Mini Bar -->
-        <div class="flex items-center justify-between text-[11px] text-muted-foreground">
-          <span class="font-semibold text-foreground">
-            Shift {roundStore.currentShift} dari 4
-          </span>
-          <span class="font-mono text-[11px]">
-            Total: <strong class="text-foreground">{formattedRoundTime}</strong> / 10:00
-          </span>
-        </div>
-        <div class="h-1 w-full overflow-hidden rounded-full bg-accent">
-          <div
-            class="h-full rounded-full bg-primary transition-all duration-300"
-            style:width={`${(1 - roundProgress) * 100}%`}
-          ></div>
-        </div>
-      </div>
-
-      <!-- Active Assigned Zone Banner for Current Judge -->
-      <div class="rounded-xl border-2 border-primary/40 bg-primary/10 p-3 shadow-sm">
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold tracking-widest text-primary uppercase">
-            Area Penilaian Anda
-          </span>
-          <span class="rounded bg-primary px-1.5 py-0.5 font-mono text-[10px] font-extrabold text-primary-foreground">
-            JURI {auth.judgeIndex + 1}
-          </span>
-        </div>
-        <div class="mt-1 flex items-baseline justify-between">
-          <div class="text-lg font-black tracking-tight text-foreground">
-            {ZONE_INFO[myAssignedZone].name}
-          </div>
-          <div class="font-mono text-xs font-bold text-primary">
-            {ZONE_INFO[myAssignedZone].range}
-          </div>
-        </div>
-        <div class="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
-          <span>Shift {roundStore.currentShift} · 150 Detik</span>
-          {#if roundStore.currentShift < 4}
-            <span class="flex items-center gap-1 text-[10px]">
-              Berikutnya: <strong class="text-foreground">{nextAssignedZone}</strong>
-            </span>
-          {:else}
-            <span class="text-emerald-400 font-semibold">Shift Terakhir</span>
-          {/if}
-        </div>
-      </div>
-
-      <!-- Checklist Penilaian per Zona (Urutan & Waktu Ditentukan Sistem) -->
-      <div class="space-y-1.5">
-        <div class="flex items-center justify-between px-1 text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
-          <span class="flex items-center gap-1.5">
-            <Clock class="h-3 w-3 text-emerald-400" />
-            <span>Checklist Zona Anda</span>
-          </span>
-          <span class="text-[9px] font-mono text-muted-foreground">J{auth.judgeIndex + 1}</span>
-        </div>
-
-        <div class="space-y-1">
-          {#each myZoneSchedule as item}
-            {@const checked = roundStore.isJudgeZoneChecked(roundStore.roundId, auth.judgeIndex, item.zone)}
-            {@const isCurrent = item.shift === roundStore.currentShift}
-            <button
-              type="button"
-              onclick={() => roundStore.toggleJudgeZoneCheck(roundStore.roundId, auth.judgeIndex, item.zone)}
-              class="w-full flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-[11px] transition {checked
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-foreground'
-                : isCurrent
-                ? 'border-primary bg-primary/15 text-foreground font-semibold'
-                : 'border-border bg-muted/60 text-muted-foreground hover:bg-accent'}"
-            >
-              <div class="flex items-center gap-2 min-w-0">
-                {#if checked}
-                  <CheckSquare class="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                {:else}
-                  <SquareIcon class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                {/if}
-                <span class="font-bold">Zona {item.zone}</span>
-                <span class="font-mono text-[10px] text-muted-foreground">({item.range})</span>
-              </div>
-              <span class="shrink-0 font-mono text-[10px] {isCurrent ? 'text-primary font-bold' : 'text-muted-foreground'}">
-                {item.startClock}–{item.endClock}
-              </span>
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <!-- Dewan Juri & Rotasi Matrix -->
-      <div class="space-y-1.5">
-        <div class="flex items-center justify-between px-1 text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
-          <span class="flex items-center gap-1.5">
-            <Users class="h-3 w-3 text-sky-400" />
-            <span>4 Dewan Juri & Rotasi</span>
-          </span>
-          <span class="text-[9px] lowercase font-normal">klik untuk pilih</span>
-        </div>
-
-        <div class="space-y-1">
-          {#each roundStore.jurors as juri, idx}
-            {@const zone = getJudgeAssignedZone(idx, roundStore.currentShift)}
-            {@const isMe = auth.judgeIndex === idx}
-            <button
-              type="button"
-              onclick={() => auth.setJudgeIndex(idx)}
-              class="w-full flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs text-left transition {isMe ? 'border-primary bg-primary/15 font-semibold text-foreground ring-1 ring-primary/40' : 'border-border bg-muted text-muted-foreground hover:bg-accent hover:text-foreground'}"
-              title="Pilih juri ini sebagai identitas Anda"
-            >
-              <div class="flex min-w-0 items-center gap-2">
-                <span
-                  class="flex h-5 w-5 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold border {isMe ? 'bg-primary text-primary-foreground border-primary' : 'bg-gradient-to-br from-sky-500/20 to-blue-600/20 text-sky-400 border-sky-400/20'}"
-                >
-                  J{idx + 1}
+            {#each schedule as item (item.zone)}
+              {@const checked = roundStore.isJudgeZoneChecked(roundStore.roundId, judgeIndex, item.zone)}
+              <div class="flex items-center justify-between gap-1 rounded-lg px-3 py-1.5 text-xs">
+                <span class="flex items-center gap-1.5">
+                  {#if checked}
+                    <CheckCircle2 class="size-3.5 text-emerald-500" aria-label="Selesai" />
+                  {:else}
+                    <Circle class="size-3.5 text-muted-foreground" aria-label="Belum selesai" />
+                  {/if}
+                  Zona {item.zone}
                 </span>
-                <span class="truncate font-medium">{juri}</span>
+                <span class="font-mono text-[10px] text-muted-foreground">{item.startClock}–{item.endClock}</span>
               </div>
-              <span class="shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-bold {isMe ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'}">
-                Zona {zone}
-              </span>
-            </button>
-          {/each}
-        </div>
-      </div>
-    </div>
-
-    <!-- Bottom: Hero Shift Timer & Prominent Rotation Alert -->
-    <div class="mt-4 space-y-3 pt-3 border-t border-border">
-      <!-- Digital Countdown Display for Area (150s) -->
-      <div
-        class="relative flex flex-col items-center justify-center rounded-2xl border p-4 text-center transition-all duration-300 {isRoundFinished ? 'border-emerald-500 bg-emerald-500/15' : isShiftTimeUp ? 'border-red-500/80 bg-red-500/15 shadow-lg shadow-red-900/30 animate-pulse' : isLowShiftTime ? 'border-amber-500/50 bg-amber-500/15' : 'border-border bg-muted'}"
-      >
-        <span class="text-[11px] font-bold tracking-widest text-amber-400 uppercase">
-          {isRoundFinished ? 'Ronde Selesai' : `Timer Area · Shift ${roundStore.currentShift}/4`}
-        </span>
-
-        <!-- Giant Number Display (Shift Countdown) -->
-        <div class="my-1 font-mono text-5xl font-black tracking-tighter sm:text-6xl {isRoundFinished ? 'text-emerald-400' : isShiftTimeUp ? 'text-red-400 animate-pulse' : isLowShiftTime ? 'text-amber-400' : 'text-foreground'}">
-          {roundStore.shiftRemainingSeconds}
-        </div>
-
-        <!-- Shift Progress Bar -->
-        <div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-accent">
-          <div
-            class="h-full rounded-full transition-all duration-300 {isRoundFinished ? 'bg-emerald-500' : isShiftTimeUp ? 'bg-red-500' : isLowShiftTime ? 'bg-amber-400' : 'bg-emerald-400'}"
-            style:width={`${shiftProgress * 100}%`}
-          ></div>
-        </div>
-
-        <div class="mt-2 flex w-full items-center justify-between font-mono text-[10px] text-muted-foreground">
-          <span>Sisa: {formattedShiftTime}</span>
-          <span>Rotasi tiap 150 dtk</span>
-        </div>
-      </div>
-
-      <!-- Rotation Alert: Prompt judges to rotate to next zone -->
-      {#if isRoundFinished}
-        <div
-          class="flex items-center gap-2 rounded-xl border border-emerald-500 bg-emerald-500/20 p-3 text-emerald-300 shadow-md shadow-emerald-600/20"
-        >
-          <CheckCircle2 class="h-5 w-5 shrink-0 text-emerald-400" />
-          <div class="text-[11px] font-bold leading-tight">
-            Waktu 10 Menit Selesai! Menunggu konfirmasi operator di arena.
+            {/each}
           </div>
-        </div>
-      {:else if isShiftTimeUp}
-        <div
-          class="flex items-center gap-2 rounded-xl border border-red-500 bg-red-600/20 p-3 text-red-300 shadow-md shadow-red-600/20 animate-bounce"
-        >
-          <AlertTriangle class="h-5 w-5 shrink-0 text-red-400" />
-          <div class="text-[11px] font-bold leading-tight">
-            Waktu 150s Habis! Pindah ke {ZONE_INFO[nextAssignedZone].name} ({ZONE_INFO[nextAssignedZone].range})!
-          </div>
-        </div>
-      {:else}
-        <div
-          class="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-accent py-2 text-center text-[10px] font-medium text-muted-foreground"
-        >
-          <Sparkles class="h-3 w-3 text-amber-400" />
-          <span>Rotasi ke area berikutnya saat timer 150s habis</span>
-        </div>
+        </section>
       {/if}
     </div>
-  </div>
-{/if}
+  {/if}
+  {@render account?.(collapsed)}
 </aside>

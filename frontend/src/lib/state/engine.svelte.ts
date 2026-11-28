@@ -1,5 +1,6 @@
 import { api, message, type Row } from "$lib/services/api";
 import { isActiveSession, readSession } from "./session-state";
+import { arenaCameraID } from "$lib/components/cameras/camera-slots";
 class Engine {
   overlay = $state(false);
   draftID = $state("");
@@ -19,8 +20,12 @@ class Engine {
   private refreshVersion = 0;
   get running() { return !!this.session?.id && ["RUNNING", "DEGRADED"].includes(this.session.state); }
   get active() { return isActiveSession(this.session); }
-  async connect() {
+  async connect(readOnly = false) {
     this.error = "";
+    if (readOnly) {
+      await this.refresh(true);
+      return;
+    }
     try {
       const b = await api.bootstrap();
       this.networks = b.networks || [];
@@ -39,13 +44,13 @@ class Engine {
       this.error = message(e);
     }
   }
-  async refresh() {
+  async refresh(readOnly = false) {
     if (this.busy) return;
     const request = ++this.refreshVersion;
     const mutation = this.mutationVersion;
     const stale = () => request !== this.refreshVersion || mutation !== this.mutationVersion;
     try {
-      if (!this.connected) {
+      if (!this.connected && !readOnly) {
         const b = await api.bootstrap();
         this.networks = b.networks || [];
       }
@@ -54,6 +59,16 @@ class Engine {
       if (typeof status.configured !== "boolean")
         throw Error("Status konfigurasi engine tidak valid");
       this.notice = status.advice || status.capacity_notice || "";
+      if (readOnly) {
+        const channels = status.configured ? await api.engine<Row[]>("GET", "/api/v1/channels") : [];
+        if (stale()) return;
+        if (!Array.isArray(channels)) throw Error("Daftar channel engine tidak valid");
+        this.channels = channels;
+        this.session = readSession(status.session);
+        this.connected = true;
+        this.error = "";
+        return;
+      }
       if (!status.configured) {
         const pairing = await api.engine<Row>("GET", "/api/v1/desktop/cloud");
         if (stale()) return;
@@ -94,7 +109,7 @@ class Engine {
     try {
       const session = readSession(await api.engine("POST", "/api/v1/media/sessions", {
         id,
-        channels: this.channels.map((c) => c.id),
+        channels: this.channels.filter((c) => c.id !== arenaCameraID).map((c) => c.id),
         restreams: [],
       }));
       if (!session) throw Error("Engine tidak mengembalikan sesi yang dimulai");

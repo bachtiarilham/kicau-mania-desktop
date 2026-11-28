@@ -61,7 +61,7 @@ func (u *usecase) SyncPlayerWithZoom(ctx context.Context, id string, r model.Rec
 		}
 	}
 
-	if (session.State == "RUNNING" || session.State == "DEGRADED") && len(session.Channels) > 0 {
+	if id != "arena-overview" && (session.State == "RUNNING" || session.State == "DEGRADED") && len(session.Channels) > 0 {
 		found := false
 		for _, v := range session.Channels {
 			if v == id {

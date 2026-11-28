@@ -6,7 +6,6 @@
     VolumeX,
     Radio,
     Sparkles,
-    RefreshCw,
     Info,
     PanelLeftClose,
     PanelLeftOpen,
@@ -18,19 +17,14 @@
   import ZoomSlider from "./zoom-slider.svelte";
   import AudioMeter from "../metrics/audio-meter.svelte";
   import JuriRoundHud from "../juri/juri-round-hud.svelte";
+  import RoundProgress from "../juri/round-progress.svelte";
   import { api } from "$lib/services/api";
   import { engine } from "$lib/state/engine.svelte";
   import { roundStore, getJudgeAssignedZone } from "$lib/state/round.svelte";
   import { auth } from "$lib/state/auth.svelte";
   import { cameraSlots } from "./camera-slots";
 
-  interface Props {
-    showZoneBar?: boolean;
-    showJuriHud?: boolean;
-    identity?: Snippet<[boolean]>;
-  }
-
-  let { showZoneBar = true, showJuriHud = true, identity }: Props = $props();
+  let { identity, account }: { identity?: Snippet<[() => void]>; account?: Snippet<[boolean]> } = $props();
 
   const STORAGE_KEY = "kicau_active_zone_3x2";
   const ZONES = [
@@ -40,7 +34,7 @@
     { id: "D" as const, label: "Zona D", range: "G19 – G24", desc: "Arena Selatan · Sisi Barat" },
   ];
 
-  let selectedZone = $state<"A" | "B" | "C" | "D">(
+  let previewZone = $state<"A" | "B" | "C" | "D">(
     (typeof localStorage !== "undefined" &&
       (localStorage.getItem(STORAGE_KEY) as "A" | "B" | "C" | "D")) ||
       "A"
@@ -50,26 +44,22 @@
   let audibleId = $state<string | null>(null);
   let zoomed = $state<Record<string, number>>({});
   let hudCollapsed = $state(false);
-  let autoRotate = $state(false);
-
-  // Auto-follow assigned rotation for the current judge during a round
-  $effect(() => {
-    if (autoRotate && (roundStore.state === "RUNNING" || roundStore.rotationAlert)) {
-      const assigned = getJudgeAssignedZone(auth.judgeIndex, roundStore.currentShift);
-      if (selectedZone !== assigned) {
-        selectedZone = assigned;
-        focusId = null;
-      }
-    }
-  });
+  const judgeIndex = $derived(roundStore.judgeIndex);
+  const selectedZone = $derived(auth.role === "juri"
+    ? judgeIndex === null ? null : getJudgeAssignedZone(judgeIndex, roundStore.elapsedSeconds)
+    : previewZone);
 
   $effect(() => {
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, selectedZone);
+    if (auth.role !== "juri" && typeof localStorage !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, previewZone);
     }
   });
 
   const zoneSlots = $derived(cameraSlots(engine.channels).filter((slot) => slot.zone === selectedZone));
+  $effect(() => {
+    if (focusId && !zoneSlots.some((slot) => slot.id === focusId)) focusId = null;
+    if (audibleId && !zoneSlots.some((slot) => slot.id === audibleId)) audibleId = null;
+  });
 
   async function toggleAudio(id: string) {
     const nextMuted = audibleId === id;
@@ -88,12 +78,11 @@
 
 <div class="flex h-full w-full flex-col overflow-hidden bg-background text-foreground select-none">
   <!-- Top Bar: Zone Selector & Control -->
-  {#if showZoneBar}
+  {#if auth.role !== "juri"}
     <div
       class="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-3 sm:px-4"
     >
       <div class="flex items-center gap-2">
-        {#if showJuriHud}
           <button
             type="button"
             onclick={() => (hudCollapsed = !hudCollapsed)}
@@ -105,17 +94,16 @@
               <span class="hidden sm:inline">Info Juri</span>
             {:else}
               <PanelLeftClose class="h-3.5 w-3.5" />
-              <span class="hidden sm:inline">Sembunyikan Info</span>
+              <span class="hidden sm:inline">Ringkas Info</span>
             {/if}
           </button>
-        {/if}
 
-        <div class="flex items-center gap-1 rounded-lg bg-muted p-1 border border-border">
+          <div class="flex items-center gap-1 rounded-lg bg-muted p-1 border border-border">
           {#each ZONES as z}
             <button
               type="button"
               onclick={() => {
-                selectedZone = z.id;
+                previewZone = z.id;
                 focusId = null;
               }}
               class="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition {selectedZone === z.id ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}"
@@ -124,21 +112,7 @@
               <span class="text-[10px] opacity-75 font-mono hidden sm:inline">({z.range})</span>
             </button>
           {/each}
-        </div>
-
-        <!-- Auto-Rotate Follow Toggle -->
-        <button
-          type="button"
-          onclick={() => (autoRotate = !autoRotate)}
-          class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition {autoRotate ? 'border-primary/50 bg-primary/10 text-primary' : 'border-border bg-muted text-muted-foreground hover:text-foreground'}"
-          title="Ketika aktif, grid kamera otomatis beralih mengikuti giliran area juri setiap 150 detik"
-        >
-          <RefreshCw class="h-3 w-3 {autoRotate && roundStore.state === 'RUNNING' ? 'animate-spin' : ''}" />
-          <span class="hidden sm:inline">Auto-Rotasi</span>
-          <span class="rounded px-1 text-[9px] font-bold {autoRotate ? 'bg-primary text-primary-foreground' : 'bg-accent'}">
-            {autoRotate ? 'ON' : 'OFF'}
-          </span>
-        </button>
+          </div>
 
         {#if focusId}
           <Button
@@ -163,7 +137,7 @@
               Area: {roundStore.shiftRemainingSeconds}s
             </span>
             <span class="text-[9px] text-muted-foreground leading-tight">
-              Shift {roundStore.currentShift}/4 · {Math.floor(roundStore.roundRemainingSeconds / 60)}:{String(roundStore.roundRemainingSeconds % 60).padStart(2, "0")}
+              {roundStore.intervalLabel} · {Math.floor(roundStore.roundRemainingSeconds / 60)}:{String(roundStore.roundRemainingSeconds % 60).padStart(2, "0")}
             </span>
           </div>
           <span class="rounded bg-accent px-1.5 py-0.5 text-[9px] text-foreground font-bold uppercase">
@@ -179,37 +153,33 @@
     </div>
   {/if}
 
-  <!-- Rotation Alert Sticky Banner -->
-  {#if roundStore.rotationAlert && roundStore.state === 'RUNNING'}
-    <div class="bg-red-600 px-4 py-2 text-white font-bold text-xs flex items-center justify-between shadow-md animate-pulse">
-      <div class="flex items-center gap-2">
-        <span class="text-base">🔔</span>
-        <span>WAKTU AREA 150 DETIK TELAH HABIS! Silakan berpindah ke area giliran berikutnya.</span>
-      </div>
-      <button
-        type="button"
-        onclick={() => (roundStore.rotationAlert = false)}
-        class="rounded bg-white/20 px-2 py-0.5 text-[10px] hover:bg-white/30"
-      >
-        Tutup
-      </button>
+  {#if roundStore.syncError}
+    <div class="border-b border-border bg-muted px-4 py-2 text-xs text-muted-foreground" role="status">
+      {roundStore.syncError}
     </div>
   {/if}
 
   <!-- Main View: Juri HUD Sidebar + 3x2 Camera Grid -->
   <div class="flex min-h-0 flex-1 overflow-hidden">
-    {#if showJuriHud}
       <JuriRoundHud
         {identity}
+        {account}
         collapsed={hudCollapsed}
         onToggleCollapse={() => (hudCollapsed = !hudCollapsed)}
       />
-    {/if}
 
     <!-- 3x2 Grid Filling Remainder of the Screen -->
-    <div class="min-h-0 flex-1 p-2 md:p-3 overflow-hidden">
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-2 md:p-3">
+      {#if auth.role === "juri"}
+        <RoundProgress />
+      {/if}
+      {#if !selectedZone}
+        <p class="grid min-h-0 flex-1 place-items-center text-center text-sm text-muted-foreground" role="status">
+          {roundStore.roundId ? "Akun ini belum cocok dengan nama juri pada ronde aktif." : "Menunggu operator memulai ronde."}
+        </p>
+      {:else}
       <div
-        class="grid h-full w-full gap-2"
+        class="grid min-h-0 w-full flex-1 gap-2"
         style:grid-template-columns={focusId ? "1fr" : "repeat(3, minmax(0, 1fr))"}
         style:grid-template-rows={focusId ? "1fr" : "repeat(2, minmax(0, 1fr))"}
       >
@@ -303,6 +273,7 @@
           </article>
         {/each}
       </div>
+      {/if}
     </div>
   </div>
 </div>

@@ -1,6 +1,6 @@
 export type ZoneId = "A" | "B" | "C" | "D";
 
-export type RoundState = "IDLE" | "RUNNING" | "PAUSED" | "FINISHED";
+export type RoundState = "IDLE" | "RUNNING" | "FINISHED";
 
 export interface ParticipantMapping {
   registrationId: string;

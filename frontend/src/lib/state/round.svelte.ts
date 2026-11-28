@@ -1,77 +1,76 @@
 import { engine } from "./engine.svelte";
 import { auth } from "./auth.svelte";
-import { api } from "$lib/services/api";
-import type {
-  JudgeZoneScheduleItem,
-  ParticipantMapping,
-  RoundState,
-  ZoneId,
-} from "$lib/models";
+import { api, message } from "$lib/services/api";
+import { gantanganChannels } from "$lib/components/cameras/camera-slots";
+import type { JudgeZoneScheduleItem, ParticipantMapping, RoundState, ZoneId } from "$lib/models";
+export type { ParticipantMapping, ZoneId } from "$lib/models";
 
-export type { JudgeZoneScheduleItem, ParticipantMapping, RoundState, ZoneId };
+const zones: ZoneId[] = ["A", "B", "C", "D"];
+const ranges = ["G01 – G06", "G07 – G12", "G13 – G18", "G19 – G24"];
+const regularSeconds = 120;
+const finalSeconds = 30;
+const regularEnd = zones.length * regularSeconds;
+const duration = regularEnd + zones.length * finalSeconds;
+export const roundMilestones = [...Array.from({ length: zones.length + 1 }, (_, index) => index * regularSeconds), duration];
+const roundPath = "/api/v1/local/round";
+const storageKey = "kicau_cloud_round_v1";
 
-const ZONE_RANGES: Record<ZoneId, string> = {
-  A: "G01 – G06",
-  B: "G07 – G12",
-  C: "G13 – G18",
-  D: "G19 – G24",
+export function getRoundInterval(elapsed: number) {
+  const second = Math.min(elapsed, duration - 1);
+  if (second < regularEnd) {
+    const index = Math.floor(second / regularSeconds);
+    return { index, offset: index, length: regularSeconds, end: (index + 1) * regularSeconds, final: false };
+  }
+  const index = Math.floor((second - regularEnd) / finalSeconds);
+  return { index, offset: (zones.length - 1 + index) % zones.length, length: finalSeconds, end: regularEnd + (index + 1) * finalSeconds, final: true };
+}
+
+export function getJudgeAssignedZone(judgeIndex: number, elapsed: number): ZoneId {
+  return zones[(judgeIndex + getRoundInterval(elapsed).offset) % zones.length];
+}
+
+export function getRoundProgress(elapsed: number, state: RoundState) {
+  const elapsedSeconds = state === "IDLE" ? 0 : Math.max(0, Math.min(duration, elapsed));
+  return {
+    elapsedSeconds,
+    percent: elapsedSeconds * 100 / duration,
+    activeStep: roundMilestones.findLastIndex((milestone) => milestone <= elapsedSeconds),
+  };
+}
+
+export function getJudgeRotationSchedule(judgeIndex: number): JudgeZoneScheduleItem[] {
+  return zones.map((_, index) => {
+    const shift = index + 1;
+    const slot = (judgeIndex + index) % zones.length;
+    return {
+      shift,
+      zone: zones[slot],
+      range: ranges[slot],
+      startClock: `0${index * 2}:00`,
+      endClock: `0${shift * 2}:00`,
+    };
+  });
+}
+
+type RoundSelection = {
+  eventId: string;
+  roundId: string;
+  eventName: string;
+  sessionName: string;
+  startTime: string;
+  endTime: string;
+  jurors: string[];
+  jurorIds?: string[];
+  participants?: ParticipantMapping[];
 };
 
-export function getJudgeAssignedZone(
-  judgeIndex: number,
-  currentShift: number
-): "A" | "B" | "C" | "D" {
-  const zones: ("A" | "B" | "C" | "D")[] = ["A", "B", "C", "D"];
-  const zoneIndex = (((judgeIndex % 4) + (Math.max(1, currentShift) - 1)) % 4 + 4) % 4;
-  return zones[zoneIndex];
-}
-
-function parseClockSeconds(raw: string): number {
-  const match = raw.trim().match(/^(\d{1,2})[:.](\d{2})(?::(\d{2}))?/);
-  if (!match) return 9 * 3600;
-  const h = Number(match[1]);
-  const m = Number(match[2]);
-  const s = Number(match[3] || "0");
-  if (h >= 24 || m >= 60 || s >= 60) return 9 * 3600;
-  return h * 3600 + m * 60 + s;
-}
-
-function formatClock(totalSeconds: number): string {
-  const normalized = ((totalSeconds % 86400) + 86400) % 86400;
-  const h = Math.floor(normalized / 3600);
-  const m = Math.floor((normalized % 3600) / 60);
-  const s = normalized % 60;
-  const base = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  return s === 0 ? base : `${base}:${String(s).padStart(2, "0")}`;
-}
-
-export function getJudgeRotationSchedule(
-  judgeIndex: number,
-  startTime = "",
-  shiftDurationSeconds = 150
-): JudgeZoneScheduleItem[] {
-  const baseSeconds = parseClockSeconds(startTime || "09:00");
-  const step = Math.max(1, shiftDurationSeconds || 150);
-  const items: JudgeZoneScheduleItem[] = [];
-  for (let shift = 1; shift <= 4; shift++) {
-    const zone = getJudgeAssignedZone(judgeIndex, shift);
-    const fromSec = baseSeconds + (shift - 1) * step;
-    const toSec = baseSeconds + shift * step;
-    items.push({
-      shift,
-      zone,
-      range: ZONE_RANGES[zone],
-      startClock: formatClock(fromSec),
-      endClock: formatClock(toSec),
-    });
-  }
-  return items;
-}
-
-const STORAGE_KEY = "kicau_cloud_round_v1";
-const SYNC_CHANNEL = "kicau_cloud_round_sync_v2";
-const roundDurationSeconds = 10 * 60;
-const shiftCount = 4;
+type RoundSnapshot = Omit<RoundSelection, "participants"> & {
+  arenaId: string;
+  participants: Pick<ParticipantMapping, "gantanganNumber" | "birdName" | "ownerName">[];
+  state: "RUNNING" | "FINISHED";
+  elapsedMs: number;
+  runId: string;
+};
 
 class RoundStore {
   eventName = $state("");
@@ -79,170 +78,64 @@ class RoundStore {
   startTime = $state("");
   endTime = $state("");
   jurors = $state<string[]>([]);
-
+  jurorIds = $state<string[]>([]);
   eventId = $state("");
   roundId = $state("");
   participants = $state<ParticipantMapping[]>([]);
-
-  readonly totalDurationSeconds = roundDurationSeconds;
-  readonly shiftDurationSeconds = roundDurationSeconds / shiftCount;
-  roundRemainingSeconds = $state(this.totalDurationSeconds);
-  shiftRemainingSeconds = $state(this.shiftDurationSeconds);
-  currentShift = $state(1);
-
   state = $state<RoundState>("IDLE");
-  rotationAlert = $state(false);
-  timeUpDialog = $state(false);
-  overtimeSeconds = $state(0);
   checkedGantangan = $state<Record<string, Record<number, boolean>>>({});
-  judgeZoneChecks = $state<Record<string, Record<string, boolean>>>({});
+  elapsedSeconds = $state(0);
+  busy = $state(false);
+  commandError = $state("");
+  syncError = $state("");
 
-  private timerInterval: ReturnType<typeof setInterval> | null = null;
-  private channel: BroadcastChannel | null = null;
-  private startedAt: number | null = null;
+  readonly totalDurationSeconds = duration;
+  interval = $derived(getRoundInterval(this.elapsedSeconds));
+  intervalLabel = $derived(this.interval.final ? `Putaran akhir ${this.interval.index + 1}/4` : `Shift ${this.interval.index + 1}/4`);
+  roundRemainingSeconds = $derived(duration - this.elapsedSeconds);
+  shiftRemainingSeconds = $derived(this.interval.end - this.elapsedSeconds);
+  timeUpDialog = $derived(this.state === "RUNNING" && this.elapsedSeconds === duration);
+  nextZoneElapsed = $derived(this.interval.end === regularEnd ? regularEnd + finalSeconds : this.interval.end);
+  private timer: ReturnType<typeof setInterval> | undefined;
+  private anchor = 0;
+  private runId = "";
 
   constructor() {
-    this.loadFromStorage();
-    this.initBroadcast();
+    if (typeof localStorage === "undefined") return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) ?? "{}");
+      this.setSelection(saved);
+      this.checkedGantangan = saved.checkedGantangan ?? {};
+    } catch {}
   }
 
-  private initBroadcast() {
-    if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
-    this.channel = new BroadcastChannel(SYNC_CHANNEL);
-    this.channel.onmessage = (event) => {
-      const data = event.data;
-      if (!data || typeof data !== "object") return;
-      if (data.type === "SYNC_STATE") {
-        this.applyExternalState(data.payload);
-      }
-    };
-  }
-
-  private broadcast() {
-    if (!this.channel) return;
-    this.channel.postMessage({
-      type: "SYNC_STATE",
-      payload: {
-        eventName: this.eventName,
-        sessionName: this.sessionName,
-        startTime: this.startTime,
-        endTime: this.endTime,
-        jurors: $state.snapshot(this.jurors),
-        eventId: this.eventId,
-        roundId: this.roundId,
-        participants: $state.snapshot(this.participants),
-        roundRemainingSeconds: this.roundRemainingSeconds,
-        shiftRemainingSeconds: this.shiftRemainingSeconds,
-        currentShift: this.currentShift,
-        state: this.state,
-        rotationAlert: this.rotationAlert,
-        timeUpDialog: this.timeUpDialog,
-        overtimeSeconds: this.overtimeSeconds,
-        startedAt: this.startedAt,
-        checkedGantangan: $state.snapshot(this.checkedGantangan),
-        judgeZoneChecks: $state.snapshot(this.judgeZoneChecks),
-      },
-    });
-  }
-
-  private applyExternalState(payload: any) {
-    if (!payload) return;
-    this.eventName = payload.eventName ?? this.eventName;
-    this.sessionName = payload.sessionName ?? this.sessionName;
-    this.startTime = payload.startTime ?? this.startTime;
-    this.endTime = payload.endTime ?? this.endTime;
-    this.jurors = Array.isArray(payload.jurors) ? payload.jurors : this.jurors;
-    this.eventId = payload.eventId ?? this.eventId;
-    this.roundId = payload.roundId ?? this.roundId;
-    this.participants = Array.isArray(payload.participants) ? payload.participants : this.participants;
-    this.roundRemainingSeconds = payload.roundRemainingSeconds ?? this.roundRemainingSeconds;
-    this.shiftRemainingSeconds = payload.shiftRemainingSeconds ?? this.shiftRemainingSeconds;
-    this.currentShift = payload.currentShift ?? this.currentShift;
-    this.state = payload.state ?? this.state;
-    this.rotationAlert = payload.rotationAlert ?? this.rotationAlert;
-    this.timeUpDialog = payload.timeUpDialog ?? this.timeUpDialog;
-    this.overtimeSeconds = payload.overtimeSeconds ?? this.overtimeSeconds;
-    this.startedAt = payload.startedAt ?? this.startedAt;
-    if (payload.checkedGantangan) this.checkedGantangan = payload.checkedGantangan;
-    if (payload.judgeZoneChecks) this.judgeZoneChecks = payload.judgeZoneChecks;
-
-    if (this.state === "RUNNING" && !this.timerInterval) {
-      this.startLocalTicker();
-    } else if (this.state !== "RUNNING" && this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
+  private setSelection(config: Partial<RoundSelection>) {
+    this.eventId = config.eventId ?? "";
+    this.roundId = config.roundId ?? "";
+    this.eventName = config.eventName ?? "";
+    this.sessionName = config.sessionName ?? "";
+    this.startTime = config.startTime ?? "";
+    this.endTime = config.endTime ?? "";
+    this.jurors = [...(config.jurors ?? [])];
+    this.jurorIds = [...(config.jurorIds ?? [])];
+    this.participants = [...(config.participants ?? [])];
   }
 
   private saveToStorage() {
     if (typeof localStorage === "undefined") return;
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          eventName: this.eventName,
-          sessionName: this.sessionName,
-          startTime: this.startTime,
-          endTime: this.endTime,
-          jurors: this.jurors,
-          eventId: this.eventId,
-          roundId: this.roundId,
-          participants: this.participants,
-          checkedGantangan: $state.snapshot(this.checkedGantangan),
-          judgeZoneChecks: $state.snapshot(this.judgeZoneChecks),
-        })
-      );
-    } catch {
-      // Ignore storage write error
-    }
+      localStorage.setItem(storageKey, JSON.stringify({
+        eventId: this.eventId, roundId: this.roundId, eventName: this.eventName, sessionName: this.sessionName,
+        startTime: this.startTime, endTime: this.endTime, jurors: this.jurors, jurorIds: this.jurorIds, participants: this.participants,
+        checkedGantangan: this.checkedGantangan,
+      }));
+    } catch {}
   }
 
-  private loadFromStorage() {
-    if (typeof localStorage === "undefined") return;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.eventName) this.eventName = parsed.eventName;
-        if (parsed.sessionName) this.sessionName = parsed.sessionName;
-        if (parsed.startTime) this.startTime = parsed.startTime;
-        if (parsed.endTime) this.endTime = parsed.endTime;
-        if (Array.isArray(parsed.jurors)) this.jurors = parsed.jurors;
-        if (parsed.eventId) this.eventId = parsed.eventId;
-        if (parsed.roundId) this.roundId = parsed.roundId;
-        if (Array.isArray(parsed.participants)) this.participants = parsed.participants;
-        if (parsed.checkedGantangan && typeof parsed.checkedGantangan === "object") {
-          this.checkedGantangan = parsed.checkedGantangan;
-        }
-        if (parsed.judgeZoneChecks && typeof parsed.judgeZoneChecks === "object") {
-          this.judgeZoneChecks = parsed.judgeZoneChecks;
-        }
-      }
-    } catch {
-      // Ignore storage parse error
-    }
-  }
-
-  setCloudRound(config: {
-    eventId: string;
-    roundId: string;
-    eventName: string;
-    sessionName: string;
-    startTime: string;
-    endTime: string;
-    jurors: string[];
-    participants?: ParticipantMapping[];
-  }) {
-    this.eventId = config.eventId;
-    this.roundId = config.roundId;
-    this.eventName = config.eventName;
-    this.sessionName = config.sessionName;
-    this.startTime = config.startTime;
-    this.endTime = config.endTime;
-    this.jurors = [...config.jurors];
-    this.participants = [...(config.participants ?? [])];
-    this.saveToStorage();
+  setCloudRound(config: RoundSelection) {
+    this.setSelection(config);
     this.resetRound();
+    this.saveToStorage();
   }
 
   selectCloudEvent(eventId: string, eventName: string) {
@@ -250,221 +143,198 @@ class RoundStore {
       if (this.eventName !== eventName) {
         this.eventName = eventName;
         this.saveToStorage();
-        this.broadcast();
       }
       return;
     }
-    this.setCloudRound({
-      eventId, roundId: "", eventName, sessionName: "",
-      startTime: "", endTime: "", jurors: [],
-    });
+    this.setCloudRound({ eventId, roundId: "", eventName, sessionName: "", startTime: "", endTime: "", jurors: [] });
   }
 
   clearCloudRound() {
     this.selectCloudEvent("", "");
   }
 
-  getParticipantByGantangan(num: number): ParticipantMapping | undefined {
-    return this.participants.find((p) => p.gantanganNumber === num);
+  getParticipantByGantangan(num: number) {
+    return this.participants.find((participant) => participant.gantanganNumber === num);
   }
 
-  isGantanganChecked(roundId: string, num: number): boolean {
-    if (!roundId) return false;
-    return Boolean(this.checkedGantangan[roundId]?.[num]);
+  isGantanganChecked(roundId: string, num: number) {
+    return Boolean(roundId && this.checkedGantangan[roundId]?.[num]);
   }
 
   toggleGantanganCheck(roundId: string, num: number) {
-    if (!roundId) return;
-    const prev = this.checkedGantangan[roundId] ?? {};
-    this.checkedGantangan = {
-      ...this.checkedGantangan,
-      [roundId]: { ...prev, [num]: !prev[num] },
-    };
-    this.saveToStorage();
-    this.broadcast();
+    this.setAllGantanganChecks(roundId, [num], !this.isGantanganChecked(roundId, num));
   }
 
   setAllGantanganChecks(roundId: string, nums: number[], checked: boolean) {
     if (!roundId) return;
-    const next: Record<number, boolean> = { ...(this.checkedGantangan[roundId] ?? {}) };
-    for (const num of nums) {
-      next[num] = checked;
-    }
+    const next = { ...this.checkedGantangan[roundId] };
+    for (const num of nums) next[num] = checked;
     this.checkedGantangan = { ...this.checkedGantangan, [roundId]: next };
     this.saveToStorage();
-    this.broadcast();
   }
 
-  isJudgeZoneChecked(roundId: string, judgeIndex: number, zone: ZoneId): boolean {
-    const key = roundId || "default";
-    return Boolean(this.judgeZoneChecks[key]?.[`${judgeIndex}-${zone}`]);
+  isJudgeZoneChecked(roundId: string, judgeIndex: number, zone: ZoneId) {
+    const item = getJudgeRotationSchedule(judgeIndex).find((shift) => shift.zone === zone);
+    return Boolean(roundId && roundId === this.roundId && item && this.elapsedSeconds >= item.shift * regularSeconds);
   }
 
-  toggleJudgeZoneCheck(roundId: string, judgeIndex: number, zone: ZoneId) {
-    const key = roundId || "default";
-    const prev = this.judgeZoneChecks[key] ?? {};
-    const slotKey = `${judgeIndex}-${zone}`;
-    this.judgeZoneChecks = {
-      ...this.judgeZoneChecks,
-      [key]: { ...prev, [slotKey]: !prev[slotKey] },
+  get judgeIndex(): number | null {
+    const byID = this.jurorIds.flatMap((id, index) => id && id === auth.userId ? [index] : []);
+    if (byID.length > 0) return byID.length === 1 ? byID[0] : null;
+    const normalize = (value: string) => value.trim().toLocaleLowerCase("id-ID").replace(/\s+/g, " ");
+    const name = normalize(auth.userName);
+    const matches = this.jurors.flatMap((judge, index) => name && normalize(judge) === name ? [index] : []);
+    return matches.length === 1 && !this.jurorIds[matches[0]] ? matches[0] : null;
+  }
+
+  async recoverOperatorRound(arenaId: string) {
+    try {
+      const started = performance.now();
+      const snapshot = await api.engine<RoundSnapshot | null>("GET", roundPath);
+      if (auth.arenaId !== arenaId || auth.role === "juri" || this.busy || this.state !== "IDLE" ||
+          !snapshot || snapshot.arenaId !== arenaId || snapshot.state !== "RUNNING") return;
+      if (this.roundId !== snapshot.roundId) this.setRemoteSelection(snapshot);
+      this.applyClock(snapshot, (performance.now() - started) / 2);
+    } catch {
+      // START and STOP report errors when the operator sends a command.
+    }
+  }
+
+  private setRemoteSelection(snapshot: RoundSnapshot) {
+    this.setSelection({
+      ...snapshot,
+      participants: snapshot.participants.map((p) => ({ ...p, registrationId: "", gantanganId: "" })),
+    });
+  }
+
+  followArena(arenaId: string) {
+    let disposed = false;
+    let pending = false;
+    this.syncError = "Menghubungkan ke server arena…";
+    const refresh = async () => {
+      if (pending) return;
+      pending = true;
+      const requestStarted = performance.now();
+      try {
+        const snapshot = await api.engine<RoundSnapshot | null>("GET", roundPath);
+        if (disposed) return;
+        this.syncError = "";
+        if (!snapshot || snapshot.arenaId !== arenaId) {
+          this.setSelection({});
+          this.resetRound();
+          return;
+        }
+        if (this.roundId !== snapshot.roundId || this.runId !== snapshot.runId) {
+          this.setRemoteSelection(snapshot);
+        }
+        this.applyClock(snapshot, (performance.now() - requestStarted) / 2);
+      } catch (error) {
+        if (!disposed) this.syncError = `Sinkronisasi ronde terputus · ${message(error)}`;
+      } finally {
+        pending = false;
+      }
     };
-    this.saveToStorage();
-    this.broadcast();
+    void refresh();
+    const poll = setInterval(() => void refresh(), 1000);
+    return () => {
+      disposed = true;
+      clearInterval(poll);
+      this.stopTicker();
+      this.syncError = "";
+    };
   }
 
   async startRound() {
-    if (!this.roundId || this.state === "RUNNING") return;
-
-    if (this.state === "FINISHED" || this.roundRemainingSeconds <= 0) {
-      this.resetRound();
-    }
-    this.state = "RUNNING";
-    this.rotationAlert = false;
-    this.startedAt = Date.now();
-
-    this.startLocalTicker();
-    this.broadcast();
-
-    if (typeof window !== "undefined" && auth.arenaId && this.roundId) {
-      void api.roundAction(auth.arenaId, this.roundId, "start", "PREPARED").catch(() => {});
-    }
-
-    // Trigger local engine recording if not running
+    if (!this.roundId || this.state === "RUNNING" || this.busy) return;
+    this.busy = true;
+    this.commandError = "";
+    let started = false;
     try {
-      if (typeof window !== "undefined" && !engine.running && !engine.busy) {
-        if (!engine.draftID) {
-          engine.draftID = await api.sessionID();
-        }
-        if (engine.pairing.engine_id && engine.pairing.arena_id === auth.arenaId) {
-          const mappings = this.participants.flatMap((participant) => {
-            const channel = engine.channels[participant.gantanganNumber - 1];
-            return channel?.id && participant.registrationId && participant.gantanganId
-              ? [{ channel_id: channel.id, registration_id: participant.registrationId, gantangan_id: participant.gantanganId }]
-              : [];
+      const selection = {
+        arenaId: auth.arenaId, eventId: this.eventId, roundId: this.roundId,
+        eventName: this.eventName, sessionName: this.sessionName, jurors: $state.snapshot(this.jurors),
+        startTime: this.startTime, endTime: this.endTime,
+        jurorIds: $state.snapshot(this.jurorIds),
+        participants: this.participants.map(({ gantanganNumber, birdName, ownerName }) => ({ gantanganNumber, birdName, ownerName })),
+      };
+      const requestStarted = performance.now();
+      const snapshot = await api.engine<RoundSnapshot>("POST", roundPath + "/start", selection);
+      this.applyClock(snapshot, (performance.now() - requestStarted) / 2);
+      started = true;
+      void api.roundAction(selection.arenaId, selection.roundId, "start", "PREPARED").catch(() => {});
+      if (engine.active || engine.busy) return;
+      if (!engine.draftID) engine.draftID = await api.sessionID();
+      if (engine.pairing.engine_id && engine.pairing.arena_id === selection.arenaId) {
+        const channels = gantanganChannels(engine.channels);
+        const mappings = this.participants.flatMap((participant) => {
+          const channel = channels[participant.gantanganNumber - 1];
+          return channel?.id && participant.registrationId && participant.gantanganId
+            ? [{ channel_id: channel.id, registration_id: participant.registrationId, gantangan_id: participant.gantanganId }]
+            : [];
+        });
+        if (mappings.length) {
+          await api.bind({ engine_id: engine.pairing.engine_id, session_id: engine.draftID, round_id: selection.roundId, mappings }).catch(() => {
+            engine.notice = "Pemetaan peserta ke rekaman belum tersinkron ke cloud.";
           });
-          if (mappings.length) {
-            await api.bind({
-              engine_id: engine.pairing.engine_id,
-              session_id: engine.draftID,
-              round_id: this.roundId,
-              mappings,
-            }).catch(() => {
-              engine.notice = "Pemetaan peserta ke rekaman belum tersinkron ke cloud.";
-            });
-          }
         }
-        await engine.start(engine.draftID);
-        engine.draftID = "";
       }
-    } catch {
-      // Gracefully ignore if engine disconnected or in test environment
+      await engine.start(engine.draftID);
+      engine.draftID = "";
+    } catch (error) {
+      this.commandError = `${started ? "Ronde berjalan, rekaman gagal dimulai" : "Ronde gagal dimulai"} · ${message(error)}`;
+    } finally {
+      this.busy = false;
     }
   }
 
-  continueRound(extraSeconds = 0) {
-    if (extraSeconds > 0) {
-      this.roundRemainingSeconds += extraSeconds;
-      this.shiftRemainingSeconds += extraSeconds;
-    }
-    this.timeUpDialog = false;
-    this.rotationAlert = false;
-    this.broadcast();
-  }
-
-  stopRound() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
-    this.state = "FINISHED";
-    this.timeUpDialog = false;
-    this.rotationAlert = false;
-    this.broadcast();
-
-    if (typeof window !== "undefined" && auth.arenaId && this.roundId) {
-      void api.roundAction(auth.arenaId, this.roundId, "begin-judging", "RUNNING").catch(() => {});
-    }
-
-    // Stop recording on engine
+  async stopRound(): Promise<boolean> {
+    if (this.busy || this.state !== "RUNNING") return false;
+    this.busy = true;
+    this.commandError = "";
     try {
-      if (engine.running && !engine.busy) {
-        void engine.stop();
-      }
-    } catch (e) {
-      console.warn("Failed to stop engine recording:", e);
+      const ids = { arenaId: auth.arenaId, roundId: this.roundId };
+      const snapshot = await api.engine<RoundSnapshot>("POST", roundPath + "/stop", ids);
+      this.applyClock(snapshot);
+      void api.roundAction(ids.arenaId, ids.roundId, "begin-judging", "RUNNING").catch(() => {});
+      if (engine.running && !engine.busy) void engine.stop().catch((error) => {
+        this.commandError = `Ronde selesai, rekaman gagal dihentikan · ${message(error)}`;
+      });
+      return true;
+    } catch (error) {
+      this.commandError = `Ronde gagal dihentikan · ${message(error)}`;
+      return false;
+    } finally {
+      this.busy = false;
     }
-  }
-
-  pauseRound() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
-    this.state = "PAUSED";
-    this.broadcast();
   }
 
   resetRound() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
+    this.stopTicker();
     this.state = "IDLE";
-    this.roundRemainingSeconds = this.totalDurationSeconds;
-    this.shiftRemainingSeconds = this.shiftDurationSeconds;
-    this.currentShift = 1;
-    this.rotationAlert = false;
-    this.timeUpDialog = false;
-    this.overtimeSeconds = 0;
-    this.startedAt = null;
-    this.broadcast();
+    this.elapsedSeconds = 0;
+    this.commandError = "";
+    this.runId = "";
   }
 
-  private startLocalTicker() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
+  private applyClock(snapshot: RoundSnapshot, transitMs = 0) {
+    this.state = snapshot.state;
+    const elapsedMs = snapshot.elapsedMs + (this.state === "RUNNING" ? transitMs : 0);
+    this.anchor = performance.now() - elapsedMs;
+    this.runId = snapshot.runId;
+    this.elapsedSeconds = Math.min(duration, Math.floor(elapsedMs / 1000));
+    if (this.state !== "RUNNING" || this.elapsedSeconds === duration) {
+      this.stopTicker();
+    } else if (!this.timer) {
+      this.timer = setInterval(() => {
+        this.elapsedSeconds = Math.min(duration, Math.floor((performance.now() - this.anchor) / 1000));
+        if (this.elapsedSeconds === duration) this.stopTicker();
+      }, 100);
+    }
+  }
 
-    this.timerInterval = setInterval(() => {
-      if (this.state !== "RUNNING") {
-        if (this.timerInterval) clearInterval(this.timerInterval);
-        return;
-      }
-
-      // Decrement total round seconds
-      if (this.roundRemainingSeconds > 0) {
-        this.roundRemainingSeconds -= 1;
-        if (this.roundRemainingSeconds === 0) {
-          // Time is up! DO NOT auto-stop recording.
-          // Trigger the dialog so field operator can choose to continue or stop.
-          this.timeUpDialog = true;
-          this.rotationAlert = true;
-        }
-      } else {
-        // Overtime: keep counting up so operator knows how much extra time has elapsed
-        this.overtimeSeconds += 1;
-      }
-
-      // Decrement shift seconds
-      if (this.shiftRemainingSeconds > 0) {
-        this.shiftRemainingSeconds -= 1;
-      }
-
-      // Check shift transition (every 150s)
-      if (this.shiftRemainingSeconds === 0) {
-        if (this.currentShift < shiftCount) {
-          // Advance to next shift
-          this.currentShift += 1;
-          this.shiftRemainingSeconds = this.currentShift === shiftCount ? this.roundRemainingSeconds : this.shiftDurationSeconds;
-          this.rotationAlert = true;
-          // Auto-clear rotation alert after 10 seconds
-          setTimeout(() => {
-            this.rotationAlert = false;
-            this.broadcast();
-          }, 10000);
-        }
-      }
-
-      this.broadcast();
-    }, 1000);
+  private stopTicker() {
+    clearInterval(this.timer);
+    this.timer = undefined;
   }
 }
 

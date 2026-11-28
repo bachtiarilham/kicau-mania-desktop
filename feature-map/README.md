@@ -10,7 +10,7 @@ Peta ini dirancang untuk developer, QA tester, dan AI Agent (khususnya *Browser 
 | Role | Tab Utama yang Dapat Diakses | Deskripsi Peran |
 | :--- | :--- | :--- |
 | **`juri`** | Monitor Juri (`cameras`) | Layar khusus dewan juri dengan grid kamera 3x2, penugasan zona A-D otomatis, dan timer shift. |
-| **`operator`** | Checklist & Kontrol Ronde (`checklist`), Livestream (`operator`), Monitor Juri (`cameras`), Rekaman & Arsip (`recordings`) | Operator teknis arena yang memverifikasi checklist gantangan–burung–WhatsApp, mengontrol start/stop ronde, memantau rotasi juri, serta melihat livestream full video. |
+| **`operator`** | Checklist & Kontrol Ronde (`checklist`), Livestream (`operator`), Rekaman & Arsip (`recordings`), Pengaturan Arena (`arena-settings`) | Operator teknis arena yang memverifikasi checklist gantangan–burung–WhatsApp, mengontrol start/stop ronde, memantau rotasi juri, serta melihat livestream full video. |
 | **`admin`** | Seluruh Tab + Pengaturan Desktop (`settings`) | Akses penuh termasuk konfigurasi NVR, kalibrasi audio, dan endpoint cloud. |
 
 ---
@@ -25,3 +25,4 @@ Peta ini dirancang untuk developer, QA tester, dan AI Agent (khususnya *Browser 
 | [04-recordings-and-whatsapp.md](./04-recordings-and-whatsapp.md) | Rekaman & Arsip WhatsApp | Manajemen arsip video per gantangan dan modal pengiriman link video via WhatsApp. |
 | [05-desktop-settings.md](./05-desktop-settings.md) | Pengaturan Desktop & Tema | Konfigurasi tema gelap/terang, kalibrasi ambang batas audio dBFS, dan binding kamera. |
 | [06-round-checklist.md](./06-round-checklist.md) | Checklist & Kontrol Ronde | Checklist ronde hari ini, kontrol Start/Stop ronde, monitoring posisi juri, serta verifikasi gantangan–burung–WhatsApp (check/uncheck). |
+| [07-competition-round-flow.md](./07-competition-round-flow.md) | Aturan Ronde Operator dan Juri | Alur target ronde 10 menit, rotasi otomatis, checklist zona, dan sinkronisasi antar-PC. |

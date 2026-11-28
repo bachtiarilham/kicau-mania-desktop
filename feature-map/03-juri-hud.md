@@ -2,6 +2,8 @@
 
 Dokumen ini mendefinisikan peta interaksi untuk layar monitor dewan juri (`ZoneGrid3x2`), pemetaan rotasi shift ke zona penilaian (A, B, C, D), dan popup notifikasi pergantian shift.
 
+Jadwal rotasi, checklist otomatis, dan sinkronisasi LAN yang ditargetkan dijelaskan di [Aturan Ronde Operator dan Juri](./07-competition-round-flow.md).
+
 ---
 
 ## Fitur 3.1: Matriks Kamera Juri (Grid 3x2)
@@ -12,7 +14,7 @@ Dokumen ini mendefinisikan peta interaksi untuk layar monitor dewan juri (`ZoneG
 
 ### 2. Cara User Mengakses Fitur
 - Pengguna dengan role **`juri`** otomatis masuk ke layar ini saat login.
-- Pengguna dengan role **`operator` / `admin`** dapat mengklik tab **`Monitor Juri (Grid 3x2)`** pada bilah samping.
+- Pengguna dengan role **`admin`** dapat membuka tab **`Monitor Juri (Grid 3x2)`** pada bilah samping.
 
 ### 3. Keyboard Shortcut
 - `1` s/d `6` : Membuka mode full-focus pada kamera gantangan ke-1 hingga ke-6 di grid aktif.
