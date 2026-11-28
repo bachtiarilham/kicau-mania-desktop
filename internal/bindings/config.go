@@ -25,6 +25,16 @@ func (d *Desktop) OpenRecordingsFolder() error {
 }
 
 func (d *Desktop) SelectRecordingsFolder() (string, error) {
+	cur := d.container.ConfigUC.GetRecordingsDir()
+	dir, err := d.SelectOriginalRecordingsFolder(cur)
+	if err != nil || dir == "" {
+		return cur, err
+	}
+	_ = d.container.ConfigUC.SetRecordingsDir(dir)
+	return dir, nil
+}
+
+func (d *Desktop) SelectOriginalRecordingsFolder(cur string) (string, error) {
 	d.HidePlayers()
 	dlg := d.app.Dialog.OpenFile().
 		CanChooseDirectories(true).
@@ -32,14 +42,8 @@ func (d *Desktop) SelectRecordingsFolder() (string, error) {
 		SetTitle("Pilih Folder Penyimpanan Rekaman Video").
 		AttachToWindow(d.window)
 
-	cur := d.container.ConfigUC.GetRecordingsDir()
 	if cur != "" {
 		dlg.SetDirectory(cur)
 	}
-	dir, err := dlg.PromptForSingleSelection()
-	if err != nil || dir == "" {
-		return cur, err
-	}
-	_ = d.container.ConfigUC.SetRecordingsDir(dir)
-	return dir, nil
+	return dlg.PromptForSingleSelection()
 }

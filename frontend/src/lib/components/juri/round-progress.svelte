@@ -5,6 +5,7 @@
   const stages = ["Mulai", "Shift 2", "Shift 3", "Shift 4", "Putaran akhir", "Selesai"];
   const progress = $derived(getRoundProgress(roundStore.elapsedSeconds, roundStore.state));
   const phase = $derived(roundStore.state === "IDLE" ? "Menunggu operator"
+    : roundStore.state === "INCOMPLETE" ? "Ronde belum selesai · menunggu pengulangan"
     : roundStore.state === "FINISHED" ? "Ronde selesai"
     : roundStore.roundRemainingSeconds === 0 ? "Waktu habis · menunggu operator"
     : roundStore.intervalLabel);

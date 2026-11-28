@@ -68,6 +68,7 @@
 
   async function handleStopClick() {
     if (!(await roundStore.stopRound())) return;
+    if (roundStore.state === "INCOMPLETE") return;
     if (!sessionName) {
       sessionName = generateSessionName();
     }
@@ -163,6 +164,10 @@
         eventId,
         roundId: r.id,
         eventName,
+        arenaName: roundStore.arenaName,
+        eventDate: roundStore.eventDate,
+        roundNumber: r.round_number,
+        cloudStatus: r.status,
         sessionName: r.title || `Sesi ${r.round_number}`,
         startTime: r.start_time || "",
         endTime: r.end_time || "",

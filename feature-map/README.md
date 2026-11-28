@@ -22,7 +22,7 @@ Peta ini dirancang untuk developer, QA tester, dan AI Agent (khususnya *Browser 
 | [01-auth-and-session.md](./01-auth-and-session.md) | Autentikasi & Pemilihan Sesi | Layar login akun Cloud (2-step scoped login) dan picker sesi lomba. |
 | [02-operator-console.md](./02-operator-console.md) | Livestream (Full Video 24) | Tampilan full video 24 gantangan dengan filter zona (A–D) dan mode Spotlight. |
 | [03-juri-hud.md](./03-juri-hud.md) | Monitor & HUD Dewan Juri | Grid kamera 3x2, checklist zona & jadwal waktu per juri, rotasi shift, dan alert pergantian shift. |
-| [04-recordings-and-whatsapp.md](./04-recordings-and-whatsapp.md) | Rekaman & Arsip WhatsApp | Manajemen arsip video per gantangan dan modal pengiriman link video via WhatsApp. |
+| [04-recordings-and-whatsapp.md](./04-recordings-and-whatsapp.md) | Rekaman & Arsip | Daftar rekaman lokal, status upload, dan pembagian tanggung jawab distribusi dengan Cloud App. |
 | [05-desktop-settings.md](./05-desktop-settings.md) | Pengaturan Desktop & Tema | Konfigurasi tema gelap/terang, kalibrasi ambang batas audio dBFS, dan binding kamera. |
 | [06-round-checklist.md](./06-round-checklist.md) | Checklist & Kontrol Ronde | Checklist ronde hari ini, kontrol Start/Stop ronde, monitoring posisi juri, serta verifikasi gantangan–burung–WhatsApp (check/uncheck). |
 | [07-competition-round-flow.md](./07-competition-round-flow.md) | Aturan Ronde Operator dan Juri | Alur target ronde 10 menit, rotasi otomatis, checklist zona, dan sinkronisasi antar-PC. |

@@ -6,13 +6,14 @@
   import { roundStore } from "$lib/state/round.svelte";
   import { auth } from "$lib/state/auth.svelte";
   import { engine } from "$lib/state/engine.svelte";
-  import { all, message, type Row } from "$lib/services/api";
+  import { all, api, message, type Row } from "$lib/services/api";
 
   let { open, onClose }: { open: boolean; onClose: () => void } = $props();
   let loading = $state(false);
   let error = $state("");
   let signInRequired = $state(false);
   let arenaId = $state("");
+  let arenaName = $state("");
   let events = $state<Row[]>([]);
   let date = $state("");
   let eventId = $state("");
@@ -36,6 +37,7 @@
         error = "Akun ini belum memiliki arena.";
         return;
       }
+      arenaName = (await api.cloud<Row>(`/arenas/${encodeURIComponent(arenaId)}`)).name;
       events = await all(`/arenas/${encodeURIComponent(arenaId)}/events`);
       const active = events.find((event) => event.id === roundStore.eventId);
       date = date || active?.event_date?.slice(0, 10) || "";
@@ -56,7 +58,7 @@
   function applyEvent() {
     if (loading || engine.active || roundStore.state === "RUNNING" || !selectedEvent) return;
     auth.setArenaId(arenaId);
-    roundStore.selectCloudEvent(selectedEvent.id, selectedEvent.title);
+    roundStore.selectCloudEvent(selectedEvent.id, selectedEvent.title, selectedEvent.event_date?.slice(0, 10) || "", arenaName);
     onClose();
   }
 </script>

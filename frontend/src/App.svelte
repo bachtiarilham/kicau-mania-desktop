@@ -4,7 +4,6 @@
     Cctv,
     Settings,
     HardDrive,
-    Upload,
     CloudDownload,
     RefreshCw,
     LogOut,
@@ -32,6 +31,13 @@
   let noticeDismissed = $state(false);
   let checkingCloudSession = $state(true);
   let cloudSessionError = $state("");
+
+  $effect(() => {
+    noticeDismissed = false;
+    if (checkingCloudSession || !auth.isLoggedIn || auth.role === "juri" || !engine.notice) return;
+    const timer = setTimeout(() => (noticeDismissed = true), 15_000);
+    return () => clearTimeout(timer);
+  });
 
   function toggleSidebar() {
     sidebarOpen = !sidebarOpen;
@@ -241,7 +247,7 @@
         </button>
       {/if}
 
-      {#if !["checklist", "operator", "cameras"].includes(tab)}
+      {#if !["checklist", "operator", "cameras", "recordings", "arena-settings"].includes(tab)}
         <SessionBar />
       {/if}
 
@@ -286,8 +292,6 @@
           </div>
         {:else if tab === "recordings"}
           <Recordings />
-        {:else if tab === "uploads"}
-          <Recordings queue />
         {:else if tab === "archive"}
           <Recordings cloud />
         {:else if tab === "arena-settings"}

@@ -8,6 +8,7 @@ import { getJudgeAssignedZone, getJudgeRotationSchedule, getRoundInterval, getRo
 const round = {
   arenaId: "arena-1", eventId: "event-1", roundId: "round-1", eventName: "Piala Umi Kasum",
   sessionName: "Sesi 1", startTime: "13:00", endTime: "13:20",
+  arenaName: "Arena Utama", eventDate: "2026-11-28", roundNumber: 1,
   jurors: ["Juri 1", "Juri 2", "Juri 3", "Juri 4"], jurorIds: ["1", "2", "3", "4"], participants: [],
 };
 
@@ -108,6 +109,21 @@ describe("official round timetable", () => {
     } finally {
       stopFollowing();
     }
+  });
+
+  it("leaves Cloud running after an early stop and restarts the clock", async () => {
+    const call = vi.spyOn(api, "engine");
+    call.mockResolvedValue({ ...round, state: "RUNNING", elapsedMs: 0 });
+    await roundStore.startRound();
+    call.mockResolvedValue({ ...round, state: "INCOMPLETE", elapsedMs: 120_000 });
+    expect(await roundStore.stopRound()).toBe(true);
+    expect(roundStore.state).toBe("INCOMPLETE");
+    expect(api.roundAction).toHaveBeenCalledTimes(1);
+    call.mockResolvedValue({ ...round, state: "RUNNING", elapsedMs: 0 });
+    await roundStore.startRound();
+    expect(roundStore.state).toBe("RUNNING");
+    expect(roundStore.roundRemainingSeconds).toBe(600);
+    expect(api.roundAction).toHaveBeenCalledTimes(1);
   });
 
   it("retains the operator's inspection checklist and clears the round when changing events", () => {

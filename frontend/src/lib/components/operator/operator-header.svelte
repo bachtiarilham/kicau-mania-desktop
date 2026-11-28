@@ -9,6 +9,7 @@
   } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button";
   import { roundStore } from "$lib/state/round.svelte";
+  import { engine } from "$lib/state/engine.svelte";
 
   interface Props {
     selectingRound?: boolean;
@@ -101,7 +102,7 @@
       <div class="flex items-center gap-2">
         <button
           type="button"
-          disabled={selectingRound || roundStore.busy || !roundStore.roundId || roundStore.state === "RUNNING"}
+          disabled={selectingRound || roundStore.busy || engine.active || !roundStore.roundId || roundStore.state === "RUNNING" || roundStore.closed}
           onclick={() => roundStore.startRound()}
           class="group relative flex h-10 items-center gap-2 rounded-full px-5 text-xs font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed {roundStore.state === 'RUNNING' ? 'bg-emerald-600/60 shadow-emerald-600/20' : 'bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 active:scale-95 shadow-emerald-500/30 hover:shadow-emerald-500/50'}"
         >
@@ -111,12 +112,12 @@
           <div class="flex h-5 w-5 items-center justify-center rounded-full bg-accent">
             <Play class="h-3 w-3 fill-current text-foreground ml-0.5" />
           </div>
-          <span>{roundStore.state === "RUNNING" ? "BERJALAN" : "START"}</span>
+          <span>{roundStore.state === "RUNNING" ? "BERJALAN" : roundStore.closed ? "SELESAI" : roundStore.state === "INCOMPLETE" ? "START ULANG" : "START"}</span>
         </button>
 
         <button
           type="button"
-          disabled={roundStore.busy || roundStore.state !== "RUNNING"}
+          disabled={roundStore.busy || (roundStore.state !== "RUNNING" && !roundStore.commandError)}
           onclick={onStopRound}
           class="flex h-10 items-center gap-2 rounded-full px-5 text-xs font-black tracking-wider text-white uppercase shadow-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 active:scale-95 shadow-red-600/30 hover:shadow-red-600/50"
         >

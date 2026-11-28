@@ -57,6 +57,10 @@ type RoundSelection = {
   roundId: string;
   eventName: string;
   sessionName: string;
+  eventDate?: string;
+  arenaName?: string;
+  roundNumber?: number;
+  cloudStatus?: string;
   startTime: string;
   endTime: string;
   jurors: string[];
@@ -67,13 +71,17 @@ type RoundSelection = {
 type RoundSnapshot = Omit<RoundSelection, "participants"> & {
   arenaId: string;
   participants: Pick<ParticipantMapping, "gantanganNumber" | "birdName" | "ownerName">[];
-  state: "RUNNING" | "FINISHED";
+  state: "RUNNING" | "INCOMPLETE" | "FINISHED";
   elapsedMs: number;
   runId: string;
 };
 
 class RoundStore {
   eventName = $state("");
+  eventDate = $state("");
+  arenaName = $state("");
+  roundNumber = $state(0);
+  cloudStatus = $state("");
   sessionName = $state("");
   startTime = $state("");
   endTime = $state("");
@@ -95,6 +103,7 @@ class RoundStore {
   roundRemainingSeconds = $derived(duration - this.elapsedSeconds);
   shiftRemainingSeconds = $derived(this.interval.end - this.elapsedSeconds);
   timeUpDialog = $derived(this.state === "RUNNING" && this.elapsedSeconds === duration);
+  closed = $derived(this.state === "FINISHED" || ["JUDGING", "CLOSED", "CANCELLED"].includes(this.cloudStatus));
   nextZoneElapsed = $derived(this.interval.end === regularEnd ? regularEnd + finalSeconds : this.interval.end);
   private timer: ReturnType<typeof setInterval> | undefined;
   private anchor = 0;
@@ -113,6 +122,10 @@ class RoundStore {
     this.eventId = config.eventId ?? "";
     this.roundId = config.roundId ?? "";
     this.eventName = config.eventName ?? "";
+    this.eventDate = config.eventDate ?? "";
+    this.arenaName = config.arenaName ?? "";
+    this.roundNumber = config.roundNumber ?? 0;
+    this.cloudStatus = config.cloudStatus ?? "";
     this.sessionName = config.sessionName ?? "";
     this.startTime = config.startTime ?? "";
     this.endTime = config.endTime ?? "";
@@ -126,6 +139,7 @@ class RoundStore {
     try {
       localStorage.setItem(storageKey, JSON.stringify({
         eventId: this.eventId, roundId: this.roundId, eventName: this.eventName, sessionName: this.sessionName,
+        eventDate: this.eventDate, arenaName: this.arenaName, roundNumber: this.roundNumber, cloudStatus: this.cloudStatus,
         startTime: this.startTime, endTime: this.endTime, jurors: this.jurors, jurorIds: this.jurorIds, participants: this.participants,
         checkedGantangan: this.checkedGantangan,
       }));
@@ -138,15 +152,15 @@ class RoundStore {
     this.saveToStorage();
   }
 
-  selectCloudEvent(eventId: string, eventName: string) {
+  selectCloudEvent(eventId: string, eventName: string, eventDate = "", arenaName = "") {
     if (eventId && this.eventId === eventId) {
-      if (this.eventName !== eventName) {
-        this.eventName = eventName;
-        this.saveToStorage();
-      }
+      this.eventName = eventName;
+      this.eventDate = eventDate || this.eventDate;
+      this.arenaName = arenaName || this.arenaName;
+      this.saveToStorage();
       return;
     }
-    this.setCloudRound({ eventId, roundId: "", eventName, sessionName: "", startTime: "", endTime: "", jurors: [] });
+    this.setCloudRound({ eventId, roundId: "", eventName, eventDate, arenaName, sessionName: "", startTime: "", endTime: "", jurors: [] });
   }
 
   clearCloudRound() {
@@ -245,7 +259,7 @@ class RoundStore {
   }
 
   async startRound() {
-    if (!this.roundId || this.state === "RUNNING" || this.busy) return;
+    if (!this.roundId || this.state === "RUNNING" || this.closed || this.busy) return;
     this.busy = true;
     this.commandError = "";
     let started = false;
@@ -254,14 +268,20 @@ class RoundStore {
         arenaId: auth.arenaId, eventId: this.eventId, roundId: this.roundId,
         eventName: this.eventName, sessionName: this.sessionName, jurors: $state.snapshot(this.jurors),
         startTime: this.startTime, endTime: this.endTime,
+        arenaName: this.arenaName, eventDate: this.eventDate, roundNumber: this.roundNumber,
         jurorIds: $state.snapshot(this.jurorIds),
         participants: this.participants.map(({ gantanganNumber, birdName, ownerName }) => ({ gantanganNumber, birdName, ownerName })),
       };
+      if (!this.arenaName || !this.eventDate || !this.roundNumber) {
+        throw Error("Pilih ulang event dan ronde Cloud untuk menentukan folder rekaman.");
+      }
+      if (this.cloudStatus !== "RUNNING") {
+        await this.moveCloudRound("start", "PREPARED", "RUNNING");
+      }
       const requestStarted = performance.now();
       const snapshot = await api.engine<RoundSnapshot>("POST", roundPath + "/start", selection);
       this.applyClock(snapshot, (performance.now() - requestStarted) / 2);
       started = true;
-      void api.roundAction(selection.arenaId, selection.roundId, "start", "PREPARED").catch(() => {});
       if (engine.active || engine.busy) return;
       if (!engine.draftID) engine.draftID = await api.sessionID();
       if (engine.pairing.engine_id && engine.pairing.arena_id === selection.arenaId) {
@@ -278,9 +298,17 @@ class RoundStore {
           });
         }
       }
-      await engine.start(engine.draftID);
+      const gantangan = Object.fromEntries(gantanganChannels(engine.channels).flatMap((channel, index) =>
+        channel?.id ? [[channel.id, index + 1]] : [],
+      ));
+      await engine.start(engine.draftID, {
+        arena_id: selection.arenaId, arena_name: this.arenaName, event_id: this.eventId,
+        event_name: this.eventName, event_date: this.eventDate, round_id: this.roundId,
+        round_number: this.roundNumber, gantangan,
+      });
       engine.draftID = "";
     } catch (error) {
+      if (started) engine.draftID = "";
       this.commandError = `${started ? "Ronde berjalan, rekaman gagal dimulai" : "Ronde gagal dimulai"} · ${message(error)}`;
     } finally {
       this.busy = false;
@@ -288,17 +316,18 @@ class RoundStore {
   }
 
   async stopRound(): Promise<boolean> {
-    if (this.busy || this.state !== "RUNNING") return false;
+    if (this.busy || this.state === "IDLE") return false;
     this.busy = true;
     this.commandError = "";
     try {
       const ids = { arenaId: auth.arenaId, roundId: this.roundId };
       const snapshot = await api.engine<RoundSnapshot>("POST", roundPath + "/stop", ids);
       this.applyClock(snapshot);
-      void api.roundAction(ids.arenaId, ids.roundId, "begin-judging", "RUNNING").catch(() => {});
-      if (engine.running && !engine.busy) void engine.stop().catch((error) => {
-        this.commandError = `Ronde selesai, rekaman gagal dihentikan · ${message(error)}`;
-      });
+      const complete = snapshot.state === "FINISHED";
+      if (engine.active && !engine.busy) await engine.stop(complete);
+      if (complete && this.cloudStatus !== "JUDGING") {
+        await this.moveCloudRound("begin-judging", "RUNNING", "JUDGING");
+      }
       return true;
     } catch (error) {
       this.commandError = `Ronde gagal dihentikan · ${message(error)}`;
@@ -306,6 +335,19 @@ class RoundStore {
     } finally {
       this.busy = false;
     }
+  }
+
+  private async moveCloudRound(action: "start" | "begin-judging", expected: string, next: string) {
+    const { arenaId } = auth;
+    const roundId = this.roundId;
+    try {
+      await api.roundAction(arenaId, roundId, action, expected);
+    } catch (error) {
+      const cloud = await api.cloud(`/arenas/${encodeURIComponent(arenaId)}/rounds/${encodeURIComponent(roundId)}`).catch(() => null);
+      if (cloud?.status !== next) throw error;
+    }
+    this.cloudStatus = next;
+    this.saveToStorage();
   }
 
   resetRound() {

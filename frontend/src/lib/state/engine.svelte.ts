@@ -102,7 +102,7 @@ class Engine {
       this.error = message(e);
     }
   }
-  async start(id: string) {
+  async start(id: string, competition?: Row) {
     if (this.busy) throw Error("Operasi sesi masih berlangsung");
     ++this.mutationVersion;
     this.busy = true;
@@ -111,6 +111,7 @@ class Engine {
         id,
         channels: this.channels.filter((c) => c.id !== arenaCameraID).map((c) => c.id),
         restreams: [],
+        ...(competition ? { competition } : {}),
       }));
       if (!session) throw Error("Engine tidak mengembalikan sesi yang dimulai");
       this.session = session;
@@ -123,7 +124,7 @@ class Engine {
       this.busy = false;
     }
   }
-  async stop() {
+  async stop(complete?: boolean) {
     const id = this.session?.id;
     if (!id || !this.active || this.busy) return;
     ++this.mutationVersion;
@@ -132,13 +133,14 @@ class Engine {
       const session = readSession(await api.engine(
         "POST",
         `/api/v1/media/sessions/${id}/stop`,
-        {},
+        complete === undefined ? {} : { complete },
       ));
       if (!session) throw Error("Engine tidak mengembalikan status Stop");
       this.session = session;
       this.error = "";
     } catch (e) {
       this.error = message(e);
+      if (complete !== undefined) throw e;
     } finally {
       ++this.mutationVersion;
       this.busy = false;

@@ -7,9 +7,9 @@
   import { engine } from "$lib/state/engine.svelte";
   import { auth } from "$lib/state/auth.svelte";
   import NativePlayer from "../cameras/native-player.svelte";
+  import { uploadPercentage } from "./upload-progress";
   import {
     HardDrive,
-    Upload,
     CloudDownload,
     Video,
     FolderOpen,
@@ -20,16 +20,14 @@
     Check
   } from "@lucide/svelte";
 
-  let { cloud = false, queue = false }: { cloud?: boolean; queue?: boolean } =
-    $props();
+  let { cloud = false }: { cloud?: boolean } = $props();
 
-  let activeTab = $state<"local" | "queue" | "cloud">("local");
+  let activeTab = $state<"local" | "cloud">("local");
 
   $effect(() => {
-    activeTab = cloud ? "cloud" : queue ? "queue" : "local";
+    activeTab = cloud ? "cloud" : "local";
   });
   let isCloud = $derived(activeTab === "cloud");
-  let isQueue = $derived(activeTab === "queue");
 
   let rows = $state<Row[]>([]),
     cursor = $state(""),
@@ -48,7 +46,18 @@
     rounds = $state<Row[]>([]);
   let recordingMuted = $state(true);
   let progress = $state<Record<string, Row>>({});
+  let progressPending = false;
   let copiedId = $state("");
+
+  const uploadLabels: Record<string, string> = {
+    WAITING_MAPPING: "Menunggu pemetaan",
+    QUEUED: "Dalam antrean",
+    UPLOADING: "Mengunggah",
+    SYNCING: "Memverifikasi di Cloud",
+    RETRYING: "Menunggu coba ulang",
+    ACCESS_DENIED: "Akses ditolak",
+    UPLOADED: "Terunggah",
+  };
 
   function formatChannelName(chId: string): string {
     if (!chId) return "Kamera";
@@ -84,6 +93,7 @@
   }
 
   function formatExportFileName(row: Row): string {
+    if (row.display_filename) return row.display_filename;
     const ch = formatChannelName(row.channel_id).replace(/\s+/g, "-");
     const d = new Date(row.started_at || Date.now());
     const yyyy = d.getFullYear();
@@ -120,8 +130,6 @@
       if (isCloud) {
         q.set("arena_id", arena || engine.pairing.arena_id || "");
         q.set("round_id", round);
-      } else {
-        q.set("state", isQueue ? "READY" : "");
       }
       const page = isCloud
         ? await api.cloud<Row>("/media/recordings?" + q)
@@ -129,15 +137,7 @@
       rows = page.items || [];
       next = page.next_cursor || "";
       hasMore = Boolean(page.has_more);
-      if (!isCloud) {
-        const states = await Promise.all(
-          rows.map(async (r) => [
-            r.id,
-            await api.engine("GET", `/api/v1/recordings/${r.id}/upload`),
-          ]),
-        );
-        progress = Object.fromEntries(states);
-      }
+      if (!isCloud) await refreshProgress();
     } catch (e) {
       error = message(e);
     } finally {
@@ -145,7 +145,27 @@
     }
   }
 
-  async function switchTab(tab: "local" | "queue" | "cloud") {
+  async function refreshProgress() {
+    if (isCloud || progressPending) return;
+    progressPending = true;
+    const visible = rows;
+    const ids = visible.filter((row) => row.state === "READY").map((row) => row.id);
+    try {
+      const updates = await Promise.allSettled(ids.map((id) =>
+        api.engine<Row>("GET", `/api/v1/recordings/${id}/upload`),
+      ));
+      if (isCloud || rows !== visible) return;
+      progress = Object.fromEntries(updates.flatMap((update, index) => {
+        const id = ids[index];
+        const value = update.status === "fulfilled" ? update.value : progress[id];
+        return value ? [[id, value]] : [];
+      }));
+    } finally {
+      progressPending = false;
+    }
+  }
+
+  async function switchTab(tab: "local" | "cloud") {
     activeTab = tab;
     cursor = "";
     history = [];
@@ -182,7 +202,8 @@
       void load();
     }
     const timer = setInterval(() => {
-      if (!playing) void load();
+      if (playing) void refreshProgress();
+      else void load();
     }, 5000);
     return () => clearInterval(timer);
   });
@@ -235,7 +256,7 @@
 </script>
 
 <!-- Sub-Tab Navigation Bar -->
-<div class="flex items-center gap-1.5 border-b border-border pb-3 mb-5">
+<div class="mb-5 flex flex-wrap items-center gap-1.5 border-b border-border pb-3">
   <button
     type="button"
     class="flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors"
@@ -248,20 +269,6 @@
   >
     <HardDrive class="h-4 w-4" />
     <span>Rekaman Lokal</span>
-  </button>
-
-  <button
-    type="button"
-    class="flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors"
-    class:bg-primary={activeTab === "queue"}
-    class:text-primary-foreground={activeTab === "queue"}
-    class:text-muted-foreground={activeTab !== "queue"}
-    class:hover:bg-accent={activeTab !== "queue"}
-    class:hover:text-foreground={activeTab !== "queue"}
-    onclick={() => switchTab("queue")}
-  >
-    <Upload class="h-4 w-4" />
-    <span>Antrean Upload</span>
   </button>
 
   {#if auth.role === "admin"}
@@ -279,22 +286,7 @@
       <span>Arsip Cloud</span>
     </button>
   {/if}
-</div>
-
-<div class="section-head mb-4">
-  <div>
-    <h1 class="text-xl font-bold tracking-tight">
-      {isCloud ? "Arsip Rekaman Cloud" : isQueue ? "Antrean Upload Cloud" : "Daftar Rekaman Lokal"}
-    </h1>
-    <p class="subtitle text-xs text-muted-foreground mt-0.5">
-      {isCloud
-        ? "Arsip privat cloud yang sudah dikaitkan ke tiket peserta lomba."
-        : isQueue
-          ? "File rekaman lokal yang sedang atau menunggu sinkronisasi ke cloud server."
-          : "File rekaman tersimpan di engine lokal arena, aman diakses dan diputar offline."}
-    </p>
-  </div>
-  <div class="flex items-center gap-2">
+  <div class="ml-auto flex flex-wrap items-center gap-2">
     {#if !isCloud}
       <Button
         variant="outline"
@@ -467,7 +459,10 @@
 
           <!-- Status Lokal -->
           <td>
-            <span class="chip">{isCloud ? "—" : r.state}</span>
+            <span class="chip">{isCloud ? "—" : r.state === "HELD" ? "Belum selesai" : r.state === "UNAVAILABLE" ? "Rekaman tidak tersedia" : r.state}</span>
+            {#if r.video_issue && r.state !== "UNAVAILABLE"}
+              <p class="mt-1 text-xs text-amber-500" title="Rekaman ini mungkin tidak lengkap atau tidak dapat diputar dengan lancar.">Rekaman Terbatas</p>
+            {/if}
             {#if r.error}
               <p class="mt-1 text-xs text-destructive">{r.error}</p>
             {/if}
@@ -475,25 +470,28 @@
 
           <!-- Status Cloud -->
           <td>
-            <span class="chip">
-              {isCloud
-                ? r.state
-                : r.state === "UPLOADED"
-                  ? "UPLOADED"
-                  : progress[r.id]?.upload_state || "WAITING_MAPPING"}
-            </span>
-            {#if progress[r.id]?.size_bytes}
-              <div class="mt-2 w-36">
-                <progress
-                  value={progress[r.id].uploaded_bytes}
-                  max={progress[r.id].size_bytes}
-                ></progress>
-                <div class="text-[10px] text-muted-foreground">
-                  {(progress[r.id].uploaded_bytes / 1048576).toFixed(1)} / {(
-                    progress[r.id].size_bytes / 1048576
-                  ).toFixed(1)} MiB
+            {#if !isCloud && (r.state === "READY" || r.state === "UPLOADED")}
+              {@const details = progress[r.id]}
+              {@const uploadState = r.state === "UPLOADED" ? "UPLOADED" : details?.upload_state || "WAITING_MAPPING"}
+              {@const percent = uploadPercentage(uploadState, details?.uploaded_bytes, details?.size_bytes)}
+              <div class="w-36 space-y-1.5" title={details?.upload_error || undefined}>
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs text-muted-foreground">{uploadLabels[uploadState] ?? uploadState}</span>
+                  <span class="font-mono text-xs font-semibold tabular-nums">{percent}%</span>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-label={`Upload ${formatChannelName(r.channel_id)}`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={percent}
+                  class="h-1.5 overflow-hidden rounded-full bg-muted"
+                >
+                  <div class="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style:width={`${percent}%`}></div>
                 </div>
               </div>
+            {:else}
+              <span class="chip">{isCloud ? r.state : "—"}</span>
             {/if}
           </td>
 
@@ -513,7 +511,7 @@
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!["READY", "UPLOADED"].includes(r.state)}
+                  disabled={!["READY", "UPLOADED", "HELD"].includes(r.state)}
                   onclick={() => {
                     recordingMuted = true;
                     playing = r.id;
@@ -524,7 +522,7 @@
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!["READY", "UPLOADED"].includes(r.state)}
+                  disabled={!["READY", "UPLOADED", "HELD"].includes(r.state)}
                   onclick={() => exportFile(r)}
                   title="Simpan file video dengan nama ramah dibaca"
                 >

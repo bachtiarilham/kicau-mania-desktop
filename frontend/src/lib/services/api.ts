@@ -35,6 +35,7 @@ export const api = {
   playRecording: (id: string, rect: Row) => call("PlayRecording", id, rect),
   export: (id: string, filename = "") => call<string>("ExportRecording", id, filename),
   selectFolder: () => call<string>("SelectRecordingsFolder"),
+  selectOriginalFolder: (current: string) => call<string>("SelectOriginalRecordingsFolder", current),
   openFolder: () => call("OpenRecordingsFolder"),
   saveSession: (sessionID: string, sessionName: string, targetDir: string, format: string) =>
     call<string[]>("SaveSessionRecordings", sessionID, sessionName, targetDir, format),
